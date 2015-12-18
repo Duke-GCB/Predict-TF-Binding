@@ -136,23 +136,6 @@ kinfo = kinfo[:-3] + " mer features"
 # and the core)
 searchstrings = ['GCGG','CCGC','GCGC']  
 
-# To avoid misalligned sequences in the PBM, we dont want to use sequences that 
-# where the difference between the orientation of a sequence is greater than 
-# some cutoff. 
-orientcutoff = 0.02
-
-# In case we want to avoid having too many files, we can get a random selection
-# of sequences to use for training the model.
-newsize = 1000
-
-# Defines the size of the center of the sequence; used to find the flanks for 
-# looking for good sequences (see searchstrings, above).
-coresize = 12
-
-# Determining whether we want to use select sequenes based on good E2F cores
-# ("good"), or use all sequences ("all")
-coretype = "good"
-
 # Number bins we split the sequences into for SVR, where one bin is used for
 # testing the model, and the remaining bins are combined for the training sequences.
 svrbins = 5
@@ -180,21 +163,6 @@ def read_data(filename):
         data.append(l) #Add each line to the array
     f.close() #closing the file
     return data
-
-def reverse_complement(seq):
-    '''Takes any sequence, and gets the reverse complement.  Note, only changes A, T, C, or G. Anything else will be left as is.'''
-    comp = string.maketrans("ATCG", "TAGC") #creates the translation definitions, required by line below
-    rev_comp = (seq[::-1]).translate(comp) #First reverses the sequence, then translates it according to rules above
-    return rev_comp
-
-def random_subset(data,n):
-    '''Takes any list, randomizes it, then divides the list into two lists, according the fraction "n".
-    Note, listA is the fraction from the list we want, listB is the remaining items from the list'''
-    random.shuffle(data) #randomizing the list
-    k = int(n*len(data)) #Finding out how many items of the list to keep
-    listA = data[:k] #New list, fraction "n" of complete list
-    listB = data[k:] #New list, remaining part of the list
-    return listA, listB
 
 def list_bins(l,bins):
     '''Takes some list l and breaks it up into bins'''
@@ -226,73 +194,6 @@ def libsvm_generate_matrix(seqlist):
             features.append(str(featureinfo[x][2])+':'+str(featureinfo[x][3])) # putting the feature values into the list
         svrmatrix.append(features) #adding the features for each sequence to the master list of features for this set of sequences
     return svrmatrix,featureinfo
-    
-def E2F_SVR_seq_selector(pbmfile):
-    seqsize = length
-    data = read_data(pbmfile)
-    if coretype == 'good': coresearch = searchstrings #used for checking if present in the "core" (=good), leave this blank to include any core, i.e. ['']
-    elif coretype == 'any': coresearch = ['']
-    
-    print "\nFinding matching sequences from the PBM file"
-    allseqlist = []
-    for n1 in range(1,len(data)):  ###for every line, skipping the first(headers)
-        seq = data[n1][2] # getting the sequence from the data
-        ###  Only selecting those sequences we want...
-        if ( any(string in seq[16:20] for string in coresearch)  #if the core is in the coresearch list, continuing on next line
-            and ( float(data[n1][6]) > -orientcutoff and float(data[n1][6]) < orientcutoff )  #if the difference in orientation is above a cutoff, continuing on next line
-            and ( 'Bound' in data[n1][0] or 'Neg' in data[n1][0] or 'Flank' in data[n1][0] or 'PosCtrl2' in data[n1][0] )  #if the sequence is in one of these categories, continuing on next line
-            and all(string2 not in seq[:18-(coresize/2)] for string2 in searchstrings) and all(string3 not in seq[(18)+(coresize/2):] for string3 in searchstrings) ): #if the flanks don't contain...
-            allseqlist.append([float(data[n1][5]),seq])
-            #print "Using this sequence"
-    ###Truncating the sequence if needed
-    print "Initially found", len(allseqlist), "sequences"
-    if len(allseqlist[0][1]) != seqsize:
-        for i in range(len(allseqlist)):
-            allseqlist[i][1] = allseqlist[i][1][(36-seqsize)/2:((36-seqsize)/2)+seqsize] #truncating the sequence by trimming the edges
-    ### Getting a random sample if list is too big
-    if len(allseqlist) > newsize:
-        frac = newsize/float(len(allseqlist))
-        print "list is too big, reducing size to", newsize, "sequences"
-        allseqlist = random_subset(allseqlist,frac)[0]
-    ### Getting the reverse complement for each sequence, but assigning the same score, and adding to the list of sequences
-    seqlist2 = []
-    for line in allseqlist:
-        seqlist2.append([line[0],reverse_complement(line[1])])
-    allseqlist = allseqlist + seqlist2
-    print "with reverse complements:", len(allseqlist)    
-    return allseqlist
-
-def Six6_SVR_seq_selector(pbmfile):
-    seqsize = length
-    data = read_data(pbmfile)
-    allseqlist = []
-    for n1 in range(1,len(data)):  ###for every line, skipping the first(headers)
-        seq = data[n1][2] # getting the sequence from the data
-        ###  Only selecting those sequences we want...
-        ###  For now, only selecting according to the orientation cutoff desired
-        if float(data[n1][6]) > -orientcutoff and float(data[n1][6]) < orientcutoff:
-            allseqlist.append([float(data[n1][5]),seq])
-    ###Truncating the sequence if needed
-    print "Initially found", len(allseqlist), "sequences"
-    if len(allseqlist[0][1]) != seqsize:
-        for i in range(len(allseqlist)):
-            allseqlist[i][1] = allseqlist[i][1][(36-seqsize)/2:((36-seqsize)/2)+seqsize] #truncating the sequence by trimming the edges
-    ### Getting a random sample if list is too big
-    if len(allseqlist) > newsize:
-        frac = newsize/float(len(allseqlist))
-        print "list is too big, reducing size to", newsize, "sequences"
-        allseqlist = random_subset(allseqlist,frac)[0]
-    ### Getting the reverse complement for each sequence, but assigning the same score, and adding to the list of sequences
-    seqlist2 = []
-    for line in allseqlist:
-        seqlist2.append([line[0],reverse_complement(line[1])])
-    allseqlist = allseqlist + seqlist2
-    print "with reverse complements:", len(allseqlist)
-    return allseqlist
-
-### Choosing which sequence selector function to use
-SVR_seq_selector = Six6_SVR_seq_selector
-#SVR_seq_selector = E2F_SVR_seq_selector
 
 def libsvm_run_gridsearch(p_list,c_list,pbmfile):
     ''' Using libsvm, runs a grid search varying cost and epsilon, then prints a table of results, followed by the best R squared'''
@@ -301,7 +202,7 @@ def libsvm_run_gridsearch(p_list,c_list,pbmfile):
     
     ### Create your own module for selecting sequences from the PBM file for your protein
     print "\nFinding good sequences from the pbmfile to use for SVR"
-    seqlist = SVR_seq_selector(pbmfile)
+    seqlist = read_data(pbmfile)
     
     ### Creating the matrix file
     print "Generating matrix file for grid search..."
@@ -350,10 +251,7 @@ def libsvm_run(c,p,pbmfile):
     
     ### Create your own module for selecting sequences from the PBM file for your protein
     print "\nFinding good sequences from the pbmfile to use for SVR"
-    allseqlist = SVR_seq_selector(pbmfile)
-#    allseqfile = outprefix + '_allseqlist.txt'
-#    f_a = open(allseqfile, 'w')
-#    for line in allseqlist: print >>f_a, line
+    allseqlist = read_data(pbmfile)
 
     print "Using", len(allseqlist), "sequences (includes reverse complements)"
     traincount = int(float(len(allseqlist)) * ((float(svrbins)-1)/float(svrbins)))
@@ -556,8 +454,6 @@ print >>f_info, '\n=============================================================
 '\n ', outprefix, '  <-- Output file pfrefix', \
 '\n ', length, '  <-- Sequence Length', \
 '\n ', kinfo, '  <-- Feature type', \
-'\n ', orientcutoff, '  <-- PBM orientation difference cutoff', \
-'\n ', coresize, '  <-- Size of central sequence for excluding sequences with good cores in the flanks for building the model', \
 '\n ', svrbins, '  <-- Number bins we split the sequences into for SVR, where for each bin, it is used for testing, with the rest used for training the model', \
 '\n  Linear   <-- LibSVM support vector regression model type', \
 
