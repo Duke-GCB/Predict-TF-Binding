@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import os, sys, string, argparse
 
@@ -6,17 +6,17 @@ import os, sys, string, argparse
 #  Command Line Arguments
 
 parser = argparse.ArgumentParser(description = 'Generating Genome Browser Tracks')
-parser.add_argument('-t', metavar = 'modeltype', 
-                    help = 'Type of scores, either PWM (log ratio), or SVR (normalized between 0 and 1)', 
+parser.add_argument('-t', metavar = 'modeltype',
+                    help = 'Type of scores, either PWM (log ratio), or SVR (normalized between 0 and 1)',
                     dest = 'runtype' ,
                     choices = ['SVR','PWM'] ,
                     required=True)
-parser.add_argument('-s', metavar = 'SequenceFile', 
-                    help = 'Sequence file where the first three columns are "Chromosome Name", "Start Position", and "Stop Position" (i.e. .bed format), and may or may not also have the sequences', 
-                    dest = 'seqfile' , 
+parser.add_argument('-s', metavar = 'SequenceFile',
+                    help = 'Sequence file where the first three columns are "Chromosome Name", "Start Position", and "Stop Position" (i.e. .bed format), and may or may not also have the sequences',
+                    dest = 'seqfile' ,
                     required=True)
-parser.add_argument('-o', metavar = 'OutFile', 
-                    help = 'Optional, the name of the output file', 
+parser.add_argument('-o', metavar = 'OutFile',
+                    help = 'Optional, the name of the output file',
                     dest = 'outfile')
 args = parser.parse_args()
 seqfile = args.seqfile
@@ -43,7 +43,7 @@ def get_genome_browser_tracks(fullscoresfile):
     '''Takes a file generated from a "peak_full_scores..." module, and generates a custom trac for the genome browser in np format.
     Columns are chromosome, start position, end position, name, score.'''
     data = read_data(fullscoresfile)
-    
+
     # Getting these from the name of the file
     if args.runtype == 'SVR': info = 'E2F1 SVR Model'
     elif args.runtype == 'PWM': info = 'E2F Transfac PWM'
@@ -67,6 +67,6 @@ def get_genome_browser_tracks(fullscoresfile):
                 newstart = (int(start)+i)+4
                 if float(peak[4+i]) > 3: print >>f, chrom, newstart, newstart+1,i, float(peak[4+i])*10 #, seq[i:i+36]
         f.close()
-        
+
 get_genome_browser_tracks(seqfile)
 
