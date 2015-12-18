@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 '''
 Created on Nov 12, 2014
@@ -15,17 +15,17 @@ from operator import itemgetter
 #  Command Line Arguments
 
 parser = argparse.ArgumentParser(description = 'E2F Binding Model')
-parser.add_argument('-i', metavar = 'PBMFile', 
-                    help = 'The results of a custom PBM experiment with sequences centered by binding site (i.e. using PWM)' , 
+parser.add_argument('-i', metavar = 'PBMFile',
+                    help = 'The results of a custom PBM experiment with sequences centered by binding site (i.e. using PWM)' ,
                     dest = 'pbmfile' ,
                     required=True)
-parser.add_argument('-o', metavar = 'OutFilePrefix', 
-                    help = 'Optional, the prefix that all output files will be based on (do not include file extension). See program notes for proper format of this file', 
+parser.add_argument('-o', metavar = 'OutFilePrefix',
+                    help = 'Optional, the prefix that all output files will be based on (do not include file extension). See program notes for proper format of this file',
                     dest = 'outprefix')
-parser.add_argument('-g', "--gridsearch", 
+parser.add_argument('-g', "--gridsearch",
                     help = "Flag for running a grid search, if optimal cost and epsilon values are not known" ,
                     action = "store_true")
-parser.add_argument('--seqlength', metavar = 'SequenceLength', 
+parser.add_argument('--seqlength', metavar = 'SequenceLength',
                     help = "Change the length of the PBM sequence (Default is 36, new sequence will remain centered according to original 36mer from PBM data)",
                     dest = "length")
 parser.add_argument('--feature', metavar = 'FeatureType',
@@ -50,7 +50,7 @@ else: outprefix = os.path.splitext(pbmfile)[0] + '_SVR-model'
 
 
 
-if args.extrafiles: 
+if args.extrafiles:
     extrafiles = 'yes'
 else: extrafiles = 'no'
 
@@ -66,8 +66,8 @@ print "\n_____  Running SVR_model_maker _____"
 
 
 ''' Notes ======================================================================
-PBM file format: Tab separated file has header line with column names, and 
-columns are: Name, ID, Sequence, Orientation1, Orientation2, Best-orientation, 
+PBM file format: Tab separated file has header line with column names, and
+columns are: Name, ID, Sequence, Orientation1, Orientation2, Best-orientation,
 and Replicate_intensity_difference.
 
 
@@ -86,7 +86,7 @@ and Replicate_intensity_difference.
 ### These parameters are querried by the program
 
 if args.gridsearch:
-    if args.c: 
+    if args.c:
         c_list_in = args.c
         c_list = c_list_in.split()
         c_list = [float(x) for x in c_list]
@@ -95,7 +95,7 @@ if args.gridsearch:
         c_list_in = raw_input(':')
         c_list = c_list_in.split()
         c_list = [float(x) for x in c_list]
-    if args.p: 
+    if args.p:
         p_list_in = args.p
         p_list = p_list_in.split()
         p_list = [float(x) for x in p_list]
@@ -114,7 +114,7 @@ else:
     else:
         print "\nLibSVM epsilon needs to be specified (if not known, try 0.01)"
         p = raw_input(':')
-    
+
 ''' Other Parameters ================================================================='''
 ### Different parameters used during the process that can be changed from there defaults here
 
@@ -123,18 +123,18 @@ else: length = 36 # Assigning the default value
 if args.rawkmer: rawkmer = args.rawkmer
 else: rawkmer = "3" # Assigning the default value
 
-# Defining what kind of features we want 
+# Defining what kind of features we want
 kmers = []
 for item in str(rawkmer): kmers.append(int(item))
 kinfo = ''
-for x in kmers: kinfo = kinfo + str(x) + " + " 
+for x in kmers: kinfo = kinfo + str(x) + " + "
 kinfo = kinfo[:-3] + " mer features"
 
-# In the case of E2Fs, we want to make sure that good sequences have a good 
+# In the case of E2Fs, we want to make sure that good sequences have a good
 # central core, without having a high-affinity 4-mer in the flanking sequences.
 # Set this to [''] to use all sequences (i.e. every 4mer is good in the flanks
 # and the core)
-searchstrings = ['GCGG','CCGC','GCGC']  
+searchstrings = ['GCGG','CCGC','GCGC']
 
 # Number bins we split the sequences into for SVR, where one bin is used for
 # testing the model, and the remaining bins are combined for the training sequences.
@@ -155,7 +155,7 @@ def read_data(filename):
     ''' Creates an array for every cell in a tab separated text file'''
     data = []
     try: f = open(filename, 'r') #opens the file as "f"
-    except IOError: 
+    except IOError:
         print "Could not open the file:", filename
         sys.exit()
     for line in f: #for each line in the file
@@ -168,8 +168,8 @@ def list_bins(l,bins):
     '''Takes some list l and breaks it up into bins'''
     n = float(len(l))/bins
     return [l[int(n*i):int(n*(i+1))] for i in range(bins)]
-    
-def libsvm_generate_matrix(seqlist): 
+
+def libsvm_generate_matrix(seqlist):
     '''Generates the matrix file from a list of sequences and their scores'''
     svrmatrix = []
     for line in seqlist:
@@ -195,15 +195,15 @@ def libsvm_generate_matrix(seqlist):
         svrmatrix.append(features) #adding the features for each sequence to the master list of features for this set of sequences
     return svrmatrix,featureinfo
 
+
 def libsvm_run_gridsearch(p_list,c_list,pbmfile):
     ''' Using libsvm, runs a grid search varying cost and epsilon, then prints a table of results, followed by the best R squared'''
     test = 0
     results = []
-    
+
     ### Create your own module for selecting sequences from the PBM file for your protein
     print "\nFinding good sequences from the pbmfile to use for SVR"
     seqlist = read_pbm_sequences(pbmfile)
-    
     ### Creating the matrix file
     print "Generating matrix file for grid search..."
     svrmatrix = libsvm_generate_matrix(seqlist)[0]
@@ -211,11 +211,11 @@ def libsvm_run_gridsearch(p_list,c_list,pbmfile):
     f = open(matrixfile, 'w')
     for line in svrmatrix: print >>f, ("\t".join(map(str,line)))
     f.close()
-    
+
     ### Reading data in libsvm format
     print '\nDoing Libsvm grid search for', pbmfile, "with 5-fold cross validation"
     print >>f_info, '\nDoing Libsvm grid search for', pbmfile, "with 5-fold cross validation"
-       
+
     for c in c_list: #testing different values of C (cost)
         row = []
         pvals = [' ']
@@ -258,7 +258,7 @@ def read_pbm_sequences(pbmfile):
 
 def libsvm_run(c,p,pbmfile):
     ''' Using libsvm, for running the best set of values (best if obtained from a grid search), using the train and test matrix files'''
-    
+
     ### Create your own module for selecting sequences from the PBM file for your protein
     print "\nFinding good sequences from the pbmfile to use for SVR"
     allseqlist = read_pbm_sequences(pbmfile)
@@ -267,20 +267,20 @@ def libsvm_run(c,p,pbmfile):
     traincount = int(float(len(allseqlist)) * ((float(svrbins)-1)/float(svrbins)))
     print "Using about", traincount, "sequences (+/-1) out of", len(allseqlist), "for training the model" #plus or minus 1, for each of the binned sets
     print >>f_info, "Using about", traincount, "sequences (+/-1) out of", len(allseqlist), "for training the model" #plus or minus 1, for each of the binned sets
-    
+
     random.shuffle(allseqlist) #randomizing the list
-    seqbins = list_bins(allseqlist,svrbins) 
+    seqbins = list_bins(allseqlist,svrbins)
     rsqinfo = []
     #### Takes the set of bins and uses one for the test sequences, and the rest for training the model
     for x in range(len(seqbins)):
-        print "\nRunning SVR on round", x+1, "of",len(seqbins) 
+        print "\nRunning SVR on round", x+1, "of",len(seqbins)
         testseq = seqbins[x]
-        trainseq = list(itertools.chain(*(seqbins[:x]+seqbins[x+1:]))) #Note, the remaining bins need to be collapsed into a single list of lists    
+        trainseq = list(itertools.chain(*(seqbins[:x]+seqbins[x+1:]))) #Note, the remaining bins need to be collapsed into a single list of lists
         #print >>f_info, 'Number of sequences in the training data set is', len(trainseq), 'out of', len(allseqlist), 'sequences'
         print "Generating the matrix files..."
-        trainmatrix, featureinfo = libsvm_generate_matrix(trainseq) 
+        trainmatrix, featureinfo = libsvm_generate_matrix(trainseq)
         testmatrix = libsvm_generate_matrix(testseq)[0]
-        
+
         ### Writting matrix related output files
         trainmatrixfile = outprefix+'_train_matrix'+'_'+str(x+1)+'.txt'
         f1 = open(trainmatrixfile, 'w',1)
@@ -290,7 +290,7 @@ def libsvm_run(c,p,pbmfile):
         f2 = open(testmatrixfile, 'w',1)
         for line in testmatrix: print >>f2, ("\t".join(map(str,line)))
         f2.close()
-        
+
         ###Training the model
         modelfile = trainmatrixfile + ".model" # specify the model file name to svm-train, otherwise it writes in current dir
         print 'Training the model for run', x+1, '...'
@@ -313,7 +313,7 @@ def libsvm_run(c,p,pbmfile):
         print 'Squared Correlation Coefficient for run', x+1, 'is', SCC
         print >>f_info, 'Squared Correlation Coefficient for run', x+1, 'is', SCC
         rsqinfo.append([SCC,x])
-        
+
         ### Printing the extra files if we have the extrafiles flag
         if extrafiles == 'yes':
             if x == 0: #We only need this file once, not for every iteration
@@ -328,9 +328,9 @@ def libsvm_run(c,p,pbmfile):
             if extrafiles == 'yes':
                 trainseqfile = outprefix+'_train_sequences.txt'
                 testseqfile = outprefix+'_test_sequences.txt'
-    
+
     rsqinfo = sorted(rsqinfo, key=itemgetter(0), reverse=True) #sorting the list by the first column
-    
+
     bestrun = rsqinfo[0][1]
     rsqlist = [ float(rsqinfo[i][0]) for i in range(len(rsqinfo)) ] #getting just the r squared scores (first column) from the list
     mean_rsq = numpy.mean(rsqlist) #getting the average r squared
@@ -346,7 +346,7 @@ def libsvm_run(c,p,pbmfile):
         f4 = open(testseqfile, 'w', 1)
         for line in testseq: print >>f4, ("\t".join(map(str,line)))
         f4.close()
-        
+
     ### Keeping only the files for the best run, and renaming them
     for x in range(len(seqbins)):
         trainmatrixfile = outprefix+'_train_matrix'+'_'+str(x+1)+'.txt'
@@ -360,10 +360,10 @@ def libsvm_run(c,p,pbmfile):
             os.remove(outfile)
         else:
             libsvm_feature_weights(modelfile)
-            os.rename(trainmatrixfile, trainmatrixfile[:-6]+'.txt')  
+            os.rename(trainmatrixfile, trainmatrixfile[:-6]+'.txt')
             os.rename(testmatrixfile, testmatrixfile[:-6]+'.txt')
             os.rename(modelfile, trainmatrixfile[:-6]+'.txt.model')
-            os.rename(outfile, testmatrixfile[0:-6]+'_SVR-prediction.txt')  
+            os.rename(outfile, testmatrixfile[0:-6]+'_SVR-prediction.txt')
 
     bestresults = [['Actual-Intensity','Predicted-Intensity']]
     for n1 in range(len(testdata)): #for every line, except the first, wich contains headders
@@ -372,31 +372,31 @@ def libsvm_run(c,p,pbmfile):
     f = open(resultsfile, 'w', 1)
     for line in bestresults: print >>f, ("\t".join(map(str,line)))
     f.close
-    
+
     ### Writing info to the info file
     print >>f_info, "\nOutput files for best run are:"
     print >>f_info, ' ', outprefix+'_train_matrix.txt', "<-- The LibSVM matrix file for the sequences used to trian the model"
-    print >>f_info, ' ', outprefix+'_test_matrix.txt', "<-- The LibSVM matrix file for the sequences used to test the model" 
+    print >>f_info, ' ', outprefix+'_test_matrix.txt', "<-- The LibSVM matrix file for the sequences used to test the model"
     if extrafiles == 'yes':
         print >>f_info, ' ', featurefile, "<-- The LibSVM matrix for the sequences used to trian the model"
-        print >>f_info, ' ', outprefix+'_train_sequences.txt', "<-- The actual sequences and the corresponding scores used for training the model" 
-        print >>f_info, ' ', outprefix+'_test_sequences.txt', "<-- The actual sequences and the corresponding scores used for testing the model" 
-        print >>f_info, ' ', featurefile, "<-- List of definitions for the features (the feature sequence and it's position in the complete sequence" 
+        print >>f_info, ' ', outprefix+'_train_sequences.txt', "<-- The actual sequences and the corresponding scores used for training the model"
+        print >>f_info, ' ', outprefix+'_test_sequences.txt', "<-- The actual sequences and the corresponding scores used for testing the model"
+        print >>f_info, ' ', featurefile, "<-- List of definitions for the features (the feature sequence and it's position in the complete sequence"
     print >>f_info, ' ', outprefix+'_train_matrix.txt.model', '  <-- The model file that can be used by libsvm to predict binding affinities'
     print >>f_info, ' ', outprefix+'_test_matrix_SVR-prediction.txt', '  <-- The actual predicted intensity scores for the test set generated by LibSVM'
     print >>f_info, ' ', resultsfile, '  <-- Contains both the actual intensities, and predicted intensities for the test set'
-                
+
 
 def libsvm_feature_weights(modelfile):
     ''' Getting feature weights, using the output from libsvm, with features of size k, works with sequences of variable sizes'''
     #print 'Getting feature weights from', modelfile
     model = read_data(modelfile)[6:] #Starting with row 7, to avoid header lines
-    k = kmers[-1]    
+    k = kmers[-1]
     ### Creating a dictionary with the base/doublet for each feature
     bases = []
     for n in itertools.product('ACGT', repeat=k):
         bases.append(''.join(n))
-    
+
     features = []
     featnum = 2 #starting the feature number at 2, because the first feature is just '1:1'
 #     print model[0][0]
@@ -419,7 +419,7 @@ def libsvm_feature_weights(modelfile):
             weight = float(line[0])*float(feature[1]) #finding the weight of each feature (= sequence weight x feature value)
             weights[int(feature[0])] = weights[int(feature[0])] + weight #updating the dictionary to account for the total weights for each feature
             counts[int(feature[0])] = counts[int(feature[0])] + int(feature[1])
-#             print 'Feature number is', feature[0], 'and value is', feature[1], 'weight is', line[0], 'val is', weight, 'count is',counts[int(feature[0])] 
+#             print 'Feature number is', feature[0], 'and value is', feature[1], 'weight is', line[0], 'val is', weight, 'count is',counts[int(feature[0])]
 #    print weights
 #    for x in range(1,346): print (x+1), "\t", weights[x]
     output = [['Feature_Number','Feature_Weight','Position','Feature','Count']]
@@ -473,12 +473,12 @@ if args.gridsearch:
     print "\nCost values to be tested:", c_list, "\nEpsilon values to be tested:", p_list
     print >>f_info, '\n ', c_list, '  <-- LibSVM costs tested', '\n ', p_list, '  <-- LibSVM epsilons tested\n'
     libsvm_run_gridsearch(p_list,c_list,pbmfile)
-    
+
 else:
     print "Running full libsvm"
     print >>f_info, '\n ', c, '  <-- LibSVM cost', '\n ', p, '  <-- LibSVM epsilon\n'
     libsvm_run(c,p,pbmfile)
-    
+
 
 f_info.close()
-    
+

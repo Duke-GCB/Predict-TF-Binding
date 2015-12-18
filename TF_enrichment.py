@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import argparse, string, sys, os, time, itertools, re, operator, random
 from subprocess import *
 
 print '''\nRunning the program to get scores for genomic sequences using a SVR or PWM model.
-Check example files for proper input file formats.  
+Check example files for proper input file formats.
 Generally speaking, input files should not contain any headers.
 
 Note!  If the program needs to get genomic sequences, more than 3GB of memory will be required.'''
@@ -14,27 +14,27 @@ Note!  If the program needs to get genomic sequences, more than 3GB of memory wi
 #  Command Line Arguments
 
 parser = argparse.ArgumentParser(description = 'E2F Binding Model')
-parser.add_argument('-t', metavar = 'RunType', 
-                    help = 'Type of run, either using PWM, or SVR for finding scores', 
+parser.add_argument('-t', metavar = 'RunType',
+                    help = 'Type of run, either using PWM, or SVR for finding scores',
                     dest = 'runtype' ,
                     choices = ['SVR','PWM'] ,
                     required=True)
-parser.add_argument('-g', metavar = 'GenomeFile', 
-                    help = 'Genome File - Fasta format, containing the sequence for each chromosome as a separate entry', 
+parser.add_argument('-g', metavar = 'GenomeFile',
+                    help = 'Genome File - Fasta format, containing the sequence for each chromosome as a separate entry',
                     dest = 'genomefile')
-parser.add_argument('-s', metavar = 'SequenceFile', 
-                    help = 'Sequence file where the first three columns are "Chromosome Name", "Start Position", and "Stop Position" (i.e. .bed format), and may or may not also have the sequences', 
-                    dest = 'seqfile' , 
+parser.add_argument('-s', metavar = 'SequenceFile',
+                    help = 'Sequence file where the first three columns are "Chromosome Name", "Start Position", and "Stop Position" (i.e. .bed format), and may or may not also have the sequences',
+                    dest = 'seqfile' ,
                     required=True)
-parser.add_argument('-n', metavar = 'NegativeSequenceFile', 
-                    help = "Sequence file for negative control sequences for ROC curves. If this flag is used, ROC data and AUC will be calculated. If this file contains more sequences than the input sequence file, it will be normalized. This file could be, for example, DNase hypersensitive sites that don't overlap the ChIP peaks given as the input sequence file" , 
+parser.add_argument('-n', metavar = 'NegativeSequenceFile',
+                    help = "Sequence file for negative control sequences for ROC curves. If this flag is used, ROC data and AUC will be calculated. If this file contains more sequences than the input sequence file, it will be normalized. This file could be, for example, DNase hypersensitive sites that don't overlap the ChIP peaks given as the input sequence file" ,
                     dest = 'negseqfile')
-parser.add_argument('-m', metavar = 'ModelFile', 
-                    help = 'The E2F .model file generated from LibSVM, or the PWM model file (in probabilities or log ratios)' , 
-                    dest = 'modelfile' , 
+parser.add_argument('-m', metavar = 'ModelFile',
+                    help = 'The E2F .model file generated from LibSVM, or the PWM model file (in probabilities or log ratios)' ,
+                    dest = 'modelfile' ,
                     required=True)
-parser.add_argument('-o', metavar = 'OutFilePrefix', 
-                    help = 'Optional, the prefix that all output files will be based on (do not include file extension)', 
+parser.add_argument('-o', metavar = 'OutFilePrefix',
+                    help = 'Optional, the prefix that all output files will be based on (do not include file extension)',
                     dest = 'outprefix')
 parser.add_argument('--direction',
                     help =  'Optional, specify the direction of the sequences to get scores for; "fwd" for scoring the forward (sense) strand, "rev" for scoring the reverse (anti-sense) strand, and "best" (default) to use the best score from both directions for each position.' ,
@@ -47,11 +47,11 @@ modelfile = args.modelfile
 runtype = args.runtype
 if args.outprefix: outprefix = args.outprefix
 else: outprefix = os.path.splitext(seqfile)[0] + '_' + modelfile + '_' + runtype + 'predict'
-if args.negseqfile: 
+if args.negseqfile:
     negseqfile = args.negseqfile
     print "\nNegative sequence file has been specified, so ROC curve and AUC will be calculated."
 
-    
+
 #===============================================================================
 
 
@@ -70,10 +70,10 @@ print >>f_info, '\n=============================================================
 '\nModel file being used (SVR or PWM file):', modelfile
 if args.genomefile:
     print >>f_info, '\nGenome file (if needed)', genomefile
-if args.negseqfile: 
+if args.negseqfile:
     negseqfile = args.negseqfile
-    print >>f_info, '\nNegative sequence file for ROC:', negseqfile 
-    
+    print >>f_info, '\nNegative sequence file for ROC:', negseqfile
+
 
 ''' Parameters =========================================================='''
 
@@ -84,31 +84,31 @@ chunksize = 1000
 
 if runtype == 'SVR':
     ### Length of the sequences used for building the model: 36 is the default value
-    length = 36 
-    
+    length = 36
+
     ### Defining what kind of features we want. I.e. '1' for 1mers, or 123. Best value for E2Fs is '3'.
     rawkmer = '3'
     kmers = []
     for item in str(rawkmer): kmers.append(int(item))
     kinfo = ''
-    for x in kmers: kinfo = kinfo + str(x) + " + " 
+    for x in kmers: kinfo = kinfo + str(x) + " + "
     kinfo = kinfo[:-3] + " mer features"
 
-    ### Sequences that don't match the criteria (SVR) should be assigned a low score 
+    ### Sequences that don't match the criteria (SVR) should be assigned a low score
     badscore = 0
 
 ### Defining whether we're scoring the forward sequences ('fwd'), reverse ('rev'), or the best of both sequences ('best')
 if args.direction: seqtype = args.direction
 else: seqtype = 'best'
-    
+
 
 '''Defining the Modules ========================================================='''
-    
+
 def read_data(filename):
     ''' Creates an array for every cell in a tab separated text file'''
     data = []
     try: f = open(filename, 'r') #opens the file as "f"
-    except IOError: 
+    except IOError:
         print "Could not open the file:", filename
         sys.exit()
     for line in f: #for each line in the file
@@ -119,49 +119,49 @@ def read_data(filename):
 
 def read_pwm(pwmfile):
     '''function that reads a pwm from a text file and converts the information into a table, (uses the top one if multiple).
-    The first column contains the corresponding nucleotide (A, C, G, T) - the other columns contain probabilities in the 
+    The first column contains the corresponding nucleotide (A, C, G, T) - the other columns contain probabilities in the
     float format. '''
     import math, copy
-    
+
     pwmdata_1 = read_data(pwmfile)
-    
+
     ### Removing all the blank lines in list (or, rather, blank lists in the array), and getting only the first PWM if multiples
     pwmdata_2 = [ x for x in pwmdata_1 if x != ['']]
     #for line in pwmdata_2: print line
-    
+
     pwmdata = []
     counter = 0
     for i in range(len(pwmdata_2)):
         if counter < 4 and any(string in str(pwmdata_2[i][0]) for string in ['A','T','C','G']):
             pwmdata.append(pwmdata_2[i])
             counter += 1
-    
+
     ### Converting all the PWM values to float
     for x in range(4): #for every line with probabilities for the bases
         for y in range(1,len(pwmdata[1])):
             pwmdata[x][y] = float(pwmdata[x][y])
             if len( pwmdata[x][0]) > 1: pwmdata[x][0] = pwmdata[x][0][0] #Removing anything after the base (for things like "A:")
-    
+
     ### Finding the sum of the columns, so if it's not 1, we can convert the numbers to probabilities.
     coltotals = []
     for n1 in range(1,len(pwmdata[1])): #for every column
         coltotal = 0
         for n2 in range(4): #for every line with probabilities for the bases
             coltotal += pwmdata[n2][n1]
-        coltotals.append(coltotal) 
+        coltotals.append(coltotal)
     if any(x > 1 for x in coltotals): #if any of the values in the list are greater than 1
         for n1 in range(1,len(pwmdata[1])): #for every column
             for n2 in range(4): #for every line with probabilities for the bases
                 pwmdata[n2][n1] = pwmdata[n2][n1]/(coltotals[n1-1])
-    
+
     ## Creating a new list, where we can convert the values to a probability matrix
     #print 'Converting values to a log probability matrix'
-    pwm_logs = copy.deepcopy(pwmdata) 
+    pwm_logs = copy.deepcopy(pwmdata)
     for x in range(4): #for every line with probabilities for the bases
         for y in range(1,len(pwm_logs[1])):
             if pwm_logs[x][y] == 0: pwm_logs[x][y] = 0 # continue
             else: pwm_logs[x][y] = math.log(pwm_logs[x][y]/0.25) #converting to log probability adjusted for base frequence
-    
+
     pwm = pwm_logs #for if we're not trimming the PWM, otherwise, comment this out and uncomment everything below
     ### Trimming the PWM, if needed
     #print 'Trimming the PWM, if needed'
@@ -171,19 +171,19 @@ def read_pwm(pwmfile):
 #         #Getting the information content for each column: 2+sum(p*log2 p)
 #         info = 2
 #         for n2 in range(4): #n2 is the value for each column (the line), skipping the first (header)
-#             info = info + (pwmdata[n2][n1] * math.log(pwmdata[n2][n1],2)) 
+#             info = info + (pwmdata[n2][n1] * math.log(pwmdata[n2][n1],2))
 #         infocontent.append(info)
 #     ### Doing the trimming
 #     pwm = copy.deepcopy(pwm_logs)
 #     for n1 in range( len(infocontent) ):  #n1 is the column for the pwm, which corresponds to n1-1 in infocontent
-#         '''Checks to make sure this column AND the following have info contents of 
+#         '''Checks to make sure this column AND the following have info contents of
 #             greater than 0.3 (need 2 in a row), for the Left side'''
 #         if n1 < (len(infocontent) / 2 ): #working on the first half of the sequence (so trimming from the right)
 #             if not ( infocontent[n1] > 0.3 and infocontent[n1+1] > 0.3 ):
 #                 for n2 in range(4): # for each value in the column (each line)
 #                     #pwm values in columns with information content less than 0.3, are replaced with blanks
 #                     pwm[n2][n1+1] = '' #Need to use n1+1 because pwm file has headder column
-#         '''Checks to make sure this column AND the preceeding have info contents of 
+#         '''Checks to make sure this column AND the preceeding have info contents of
 #             greater than 0.3 (need 2 in a row), for the Right side'''
 #         if n1 >(len(infocontent) / 2 ): #working on the last half of the sequence (so trimming from the left)
 #             if not ( infocontent[n1] > 0.3 and infocontent[n1-1] > 0.3 ):
@@ -191,8 +191,8 @@ def read_pwm(pwmfile):
 #                     pwm[n2][n1+1] = '' #Need to use n1+1 because pwm file has headder column
 #     for n3 in range(4): #for each value in the column...
 #         pwm[n3] = filter(None, pwm[n3]) #filter out any values that are blank
-    
-    return pwm 
+
+    return pwm
 
 def reverse_complement(seq):
     '''Takes any sequence, and gets the reverse complement.  Note, only changes A, T, C, or G. Anything else will be left as is.'''
@@ -201,7 +201,7 @@ def reverse_complement(seq):
     return rev_comp
 
 def load_genome(genome_file):  #created by Alina
-    '''load the whole genome: read from file and then construct a dictionary with a 
+    '''load the whole genome: read from file and then construct a dictionary with a
     loooong sequence for each chromosome.'''
     if not args.genomefile:
         sys.exit("A genome file must be specified using the -g flag")
@@ -211,12 +211,12 @@ def load_genome(genome_file):  #created by Alina
     try:
         memory = int(os.popen("free -m").readlines()[1].split()[1])
         if memory < 3000: print "Warning, This program needs at least 3GB of free memory for loading the genome file, and it looks like you have less than that. Trying to continue..."
-    except: 
+    except:
         print "This program needs at least 3GB of free memory for loading the genome file"
         pass
     print 'Loading the whole genome from', genome_file
     genome = {}
-    
+
     curr_chr = 'chr1'
     curr_seq = ''
     for line in f:
@@ -259,14 +259,14 @@ def normalize_peak_lengths(peak1file,peak2file):
     '''Takes two narrow peak or bed files, and reduces the size of the larger one to the size of the smaller file
     by taking each sequence in the smaller file, finding an equal or larger sequence in the larger file, then
     reduces the new sequence to the length of the smaller (if not equal), and writes this to a new list, and
-    also deletes the peak from the larger file so it won't be re-used. Returns the complete smaller set, and 
+    also deletes the peak from the larger file so it won't be re-used. Returns the complete smaller set, and
     the shrunk larger set. Data must be in the format with col1 = chromosome, col2 = peakstart, col3 = peakend'''
-    
-    ### Reading the np files and setting the lengths of the peaks as the 4th column, and getting rid of the 
+
+    ### Reading the np files and setting the lengths of the peaks as the 4th column, and getting rid of the
     ###  rest of the fluff in the np files
     peak1data = get_peak_lengths(peak1file)
     peak2data = get_peak_lengths(peak2file)
-    
+
     ### setting the larger file to set1, and the smaller to set2
     if len(peak1data) > len(peak2data):
         set1 = peak1data
@@ -276,21 +276,21 @@ def normalize_peak_lengths(peak1file,peak2file):
         set1 = peak2data # we need to randomize this
         set2 = peak1data
         outfile = os.path.splitext(peak2file)[0]+'_normalized-to_'+os.path.splitext(peak1file)[0]+'.pk'
-    
+
     if os.path.isfile(outfile):
         print "Normalized file already exists.  Using this file."
         return outfile, read_data(outfile)
-    
+
     random.shuffle(set1)
     print "larger file is", len(set1), "smaller is", len(set2)
-    
-    ### Creating a new set of peaks, from the larger set, that has the same number of peaks, with 
+
+    ### Creating a new set of peaks, from the larger set, that has the same number of peaks, with
     ###  identical lengths to those in the smaller file
     newdata = []
     for peak in set2: #for every peak in the smaller set
         size = peak[3] #getting the length of the peak
         #print "\npeak size is", size
-        for x in range(len(set1)): #find a peak in the randomized larger set 
+        for x in range(len(set1)): #find a peak in the randomized larger set
             peak2 = set1[x]
             size2 = peak2[3] #getting the length of the larger peak
             #print "\ncomparing", size, "to", size2
@@ -305,8 +305,8 @@ def normalize_peak_lengths(peak1file,peak2file):
                 #print "old", start, stop, (stop-start), "- new", newstart, newstop, (newstop-newstart)
                 #print peak,peak2,newpeak,"\n"
                 break
-    
-    print "writing data to", outfile, "newsize is", len(newdata) 
+
+    print "writing data to", outfile, "newsize is", len(newdata)
     f=open(outfile,"w")
     for line in newdata: print >>f, ("\t".join(map(str,line)))
     f.close()
@@ -317,12 +317,12 @@ def binding_prediction_chipall(modelfile,seqfile,genomefile):
     '''Takes a ChIP peak file, uses a libsvm regression model file and libsvm to predict the binding intensity
     for every kmer (length according to the model) in each peak, returns all scores.'''
     dataseqfile = os.path.splitext(seqfile)[0]+'_sequences.txt' #getting the file name
-    
+
     ### Checking if this file already contains sequences, so we don't have to bother getting them
     seqdata = read_data(seqfile)
     linetest = seqdata[0] #getting the first line from the file for testing
     seqloc = 0
-    
+
     if len(linetest) > 3:
         for col in linetest[3:]: #for each column, starting with the 4th (cant be in first three)
             if not re.search(r'[^ATGC]', col) and len(col) == int(linetest[2]) - int(linetest[1]): # if this column contains only A, T, G, or C, and is the right length
@@ -337,13 +337,13 @@ def binding_prediction_chipall(modelfile,seqfile,genomefile):
         ### Writing this to a new file name. Note, if the last column was the sequence, we're only renaming the file
         print "writing these to", dataseqfile
         f_seqs=open(dataseqfile, 'w', 1)
-        for line in seqdata: 
+        for line in seqdata:
             print >>f_seqs, ("\t".join(map(str,line)))
         f_seqs.close
         if len(read_data(dataseqfile)) == 0: sys.exit("The sequence file was not created properly: exiting!")
         else: print "sequence file was not empty, using this..."
     else: print "no sequence found in input file"
-     
+
     ### Getting the genome
     if not os.path.isfile(dataseqfile): #If the file doesn't already exist (i.e. wasn't created above, or any time in the past
         print 'Generating the sequences for the data sets...'
@@ -364,17 +364,17 @@ def binding_prediction_chipall(modelfile,seqfile,genomefile):
         print 'Loading the data sets with sequences generated previously (delete or rename them if you want generate new ones)'
         #print >>f, 'The file'
         #data = read_data(seqfile)
-    
-    if seqtype == 'fwd': 
+
+    if seqtype == 'fwd':
         datascorefile = outprefix+'_'+os.path.splitext(modelfile)[0]+'_FWD_SVR-scores.txt'
         print >>f_info, "Finding the scores for only sequences in the forward direction"
-    elif seqtype == 'rev': 
+    elif seqtype == 'rev':
         datascorefile = outprefix+'_'+os.path.splitext(modelfile)[0]+'_REV_SVR-scores.txt'
         print >>f_info, "Finding the scores for only sequences in the reverse direction"
     elif seqtype == 'best':
         datascorefile = outprefix+'_'+os.path.splitext(modelfile)[0]+'_SVR-scores.txt'
         print >>f_info, "Finding the best score of both the forward and reverse sequences"
-    
+
     print >>f_info, 'Scores are being written to: ', datascorefile
     print 'Getting scores for this sequence using the SVR model...'
     seqdata = read_data(dataseqfile)
@@ -382,24 +382,24 @@ def binding_prediction_chipall(modelfile,seqfile,genomefile):
     return datascorefile
 
 def scores_by_SVR(seqdata,modelfile,outfile):
-    '''Takes a ChIP file in a format with col1 = chromosome, col2 = seqstart, col3 = seqend, and the last 
-    column has the sequence for that peak, gets the predicted intensity for all sub-sequences (length is 
-    defined in the model file) in each peak, Now also checks if the outfile already exists, and starts 
+    '''Takes a ChIP file in a format with col1 = chromosome, col2 = seqstart, col3 = seqend, and the last
+    column has the sequence for that peak, gets the predicted intensity for all sub-sequences (length is
+    defined in the model file) in each peak, Now also checks if the outfile already exists, and starts
     where it left off in case of incomplete run. "outfile" is the name of the desired output file. Make
     sure to edit the lines below when testing what the core sequence so that it matches the models used.
     Now optimiezed for speed'''
-    
+
     if os.path.isfile(outfile):
         if len(read_data(outfile)) == len(seqdata):
             print "Looks like this file already has sequences. Delete this file and re-run to start over:", outfile
-            return 
-    
-    ### Breaking the allseqs file into smaller chunks if it's too big 
+            return
+
+    ### Breaking the allseqs file into smaller chunks if it's too big
     print "Total number of sequences in the input file:", len(seqdata)
-    
+
     ### Splitting list into smaller lists, and saving as a list of lists
     chiplists = [seqdata[i:i + chunksize] for i in range(0, len(seqdata), chunksize)]
-    
+
     chunks = len(chiplists)
     if chunks > 1: print "Splitting this into", chunks, "files, each with", chunksize, "main sequences"
     #else: print "This is small enough, using whole file"
@@ -408,7 +408,7 @@ def scores_by_SVR(seqdata,modelfile,outfile):
     for n in range(len(chiplists)): #for each peak
         #print "testing set", n+1, "of", len(chiplists)
         smallchip = chiplists[n]
-    
+
         ### Making master list of sequences to get scored (i.e. 36mers)
         allseqs = [] #resulting colums = chromosome, peakstart, peakend, kmer-number, kmer-seq
         for line in smallchip:
@@ -429,12 +429,12 @@ def scores_by_SVR(seqdata,modelfile,outfile):
             coreR = kmerR[(length/2)-2:(length/2)+2] #finding the central core 4-mer for reverse
             if any(coreseq in coreF for coreseq in searchstrings): seqlist.append(kmer) #if the core is a good core, add to the list
             if any(coreseq in coreR for coreseq in searchstrings): seqlist.append(kmerR) #if the core is a good core, add to the list
-         
+
         seqlist = list(set(seqlist)) #removing duplicates from the list (not order preserving)
         if len(chiplists) > 1: print "  Getting the SVR scores for", len(seqlist), "small sequences:  set", n+1, "of", len(chiplists)
         else: print "  Getting the SVR scores for", len(seqlist), "small sequences"
         scores = apply_model_to_seqs(seqlist,modelfile) #dictionary with the sequence as the key, and the score as the value
-        
+
         ### Assigning SVR scores (or badscore) to allseqs list
         #print "Assigning scores to the right sequences"
         print "Processing SVR scores"
@@ -443,11 +443,11 @@ def scores_by_SVR(seqdata,modelfile,outfile):
             seqR = reverse_complement(seqF)
             #print allseqs[i][4], len(scores)
             ### Getting the score. Note, kmers that were scored have reverse compliments, getting best of those two scores, or badscore
-            if seqF in scores: 
+            if seqF in scores:
                 scoreF = scores[seqF]
                 del scores[seqF] #removing this from the dictionary to make things faster as we go on
             else: scoreF = badscore #assigning the default badscore if we didn't get a score for this sequence
-            if seqR in scores: 
+            if seqR in scores:
                 scoreR = scores[seqR]
                 del scores[seqR] #removing this from the dictionary to make things faster as we go on
             else: scoreR = badscore
@@ -457,7 +457,7 @@ def scores_by_SVR(seqdata,modelfile,outfile):
             else: sys.exit("seqtype parameter in the program is not valid; must be 'fwd', 'rev', or 'best' ")
             allseqs[i].append(newscore)
             #print "score is", newscore, "for", allseqs[i]
-     
+
         ### Formatting results and writing to output file
         print "Formatting results for part", n+1,"out of", len(chiplists), "and updating output file:", outfile
         lineout = []
@@ -469,19 +469,19 @@ def scores_by_SVR(seqdata,modelfile,outfile):
                 lineout = [chrom, start, stop, line[-1]]
             else: #adding the score to the line
                 lineout.append(line[-1]) #appending the score
-            if n2 == len(allseqs) - 1: #if this is the last line, write the outline to the file, and quit 
+            if n2 == len(allseqs) - 1: #if this is the last line, write the outline to the file, and quit
                 print >>f, "\t".join(map(str,lineout))
                 break #if this is the last line, stop
             if line[:3] != allseqs[n2+1][:3]: #if the next line is for a different peak, write the results to the file, and start a new line
                 print >>f, "\t".join(map(str,lineout))
                 lineout = []
-        
+
     f.close()
 
 def apply_model_to_seqs(bigseqlist,model):
     '''Getting predicted scores for set of sequences'''
     #starttime = time.time()
-    
+
     ### Breaking this up into smaller sets of sequences if too large, to prevent libsvm from crashing
     sizelimit = 10000
     allseqlists = [bigseqlist[i:i + sizelimit] for i in range(0, len(bigseqlist), sizelimit)] #breaking into groups of specificed size
@@ -494,31 +494,31 @@ def apply_model_to_seqs(bigseqlist,model):
     ### Creating temporary files for each set of sequences to run
     for i in range(setnum): # for each set of 36mers (if there weren't too many sequences, this should be "0" for a single set)
         tempf = open("SVRseqs_temp"+str(i)+".txt", 'w')
-        for line in allseqlists[i]: 
+        for line in allseqlists[i]:
             print >>tempf, line
         tempf.close()
-        
+
     ### Opening each temporary file separately to run libsvm on
     for i in range(setnum):
-        
+
         ### Getting the sequences from the temp file
         tempfile = "SVRseqs_temp"+str(i)+".txt"
         #print "opening file", tempf
         seqlist = []
         try: tempf = open(tempfile, 'r') #opens the file as "f"
-        except IOError: 
+        except IOError:
             print "Could not open the file:", tempfile
             sys.exit()
         for line2 in tempf: #for each line in the file
             #l = string.split(line.strip(), '\t') #removes any carriage returns, then splits the tab separated line into columns
             seqlist.append(line2.strip()) #Add each line to the array
         tempf.close() #closing the file
-        
+
         ### Generating matrix file for each sequence in this set
         svrmatrix = []
-        if len(allseqlists) > 1: print "Testing set", i+1, "of", setnum, " - ", len(seqlist), "sequences" 
+        if len(allseqlists) > 1: print "Testing set", i+1, "of", setnum, " - ", len(seqlist), "sequences"
         for seq in seqlist:
-            
+
             ###Creating the list of features with relevent info
             featureinfo = [['feature','position','featnum','featvalue'],['start','na',1,1]] #header, and first feature which never changes
             featnum = 2 #the first feature is already definde as 1:1, so we start with 2
@@ -538,14 +538,14 @@ def apply_model_to_seqs(bigseqlist,model):
             for x in range(1,len(featureinfo)): #for every feature, in this list (skipping first item because header)
                 features.append(str(featureinfo[x][2])+':'+str(featureinfo[x][3])) # putting the feature values into the list
             svrmatrix.append(features) #adding the features for each sequence to the master list of features for this set of sequences
-        
+
         ### Writing the matrix to a temporary file
         matrixfile = 'SVRmatrix_temp.txt'
         #print 'Writing matrix to', matrixfile
         f1 = open(matrixfile, 'w')
         for line in svrmatrix: print >>f1, ("\t".join(map(str,line)))
         f1.close()
-        
+
         ### Getting the predicted scores using the SVR model
         outfile = matrixfile[:-4]+'-prediction.txt'
         print "svm-predict", matrixfile, modelfile, outfile
@@ -554,7 +554,7 @@ def apply_model_to_seqs(bigseqlist,model):
         output, error = Popen(args, stdout = PIPE, stderr = PIPE).communicate() #running the command, and storing the results
         if len(error) > 0: #if running the command caused an error, print the error
             print "SVM-predict error:", error
-        
+
         ### Getting and organizing the results
         outdata = read_data(outfile)
         #print "length of seqlist:", len(seqlist)
@@ -571,23 +571,23 @@ def apply_model_to_seqs(bigseqlist,model):
     #runtime = int(endtime - starttime)
     #print "SVR runtime (hh:mm:ss) = ", time.strftime('%H:%M:%S', time.gmtime(runtime))
     return results #output is dictionary with the sequence as the key, and the score as the value
-    
+
 def SVR_ROC(modelfile,posscorefile,negscorefile):
-    '''The goal here is to take a libsvm regression model for binding, a positive set of sequences (i.e. ChIP peaks), 
+    '''The goal here is to take a libsvm regression model for binding, a positive set of sequences (i.e. ChIP peaks),
     and a negative set of sequences (i.e. DNAse not overlapping ChIP peaks), and builds a table for making an ROC plot'''
-    
+
     posscoredata = read_data(posscorefile)
     negscoredata = read_data(negscorefile)
-    
+
     ### Finding the max and min from the two data sets
     high, low = 1.0,0.0
-    
+
     ### For each data set, getting the maximum score for each sequence, and only keeping this as 4th column
     for data in [posscoredata, negscoredata]:
         for i in range(len(data)):
             maxscore = max([float(x) for x in data[i][3:]])
             data[i] = data[i][:3] + [maxscore] #re-writing the line to only include chromosome, start position, stop position, and max score
-     
+
     ### Getting the list of cutoffs to use
     cutoffs = []
     counter = low
@@ -596,7 +596,7 @@ def SVR_ROC(modelfile,posscorefile,negscorefile):
         cutoffs.append(counter)
         counter += (((high-low)/size) )
     cutoffs.append(high) # we need to be inclusive of the max value for the cutoff
-     
+
     ### Building the TPR/FPR table for every score cutoff
     ROCdata = []
     for cutoff in cutoffs:
@@ -605,12 +605,12 @@ def SVR_ROC(modelfile,posscorefile,negscorefile):
         #print "looking at positive controls"
         for line in posscoredata: # Getting TP and FN
             #print line[3], cutoff
-            if float(line[3]) >= cutoff: TP += 1 # If this positive control has a score above the cutoff, then this a true positive 
+            if float(line[3]) >= cutoff: TP += 1 # If this positive control has a score above the cutoff, then this a true positive
             else: FN += 1 # If this is below the cutoff, then this is a false negative
         #print "looking at negative controls"
         for line in negscoredata:
             #print line[3]
-            if float(line[3]) < cutoff: TN += 1 # If this negative control has a score below the cutoff, then this a true negative 
+            if float(line[3]) < cutoff: TN += 1 # If this negative control has a score below the cutoff, then this a true negative
             else: FP += 1 # If this is above the cutoff, then this is a false positive
         #print cutoff, TP, FN, FP, TN, '\n'
         TPR = float(TP)/(float(TP)+float(FN))
@@ -621,22 +621,22 @@ def SVR_ROC(modelfile,posscorefile,negscorefile):
     f=open(outfile, 'w')
     for line in ROCdata: print >>f, "\t".join(map(str,line))
     f.close
-    
+
     auc = AUC(ROCdata)
     print 'AUC is', auc
     print >>f_info, 'AUC is', auc
-    
+
 
 def binding_prediction_PWM_chipall(pwmfile,seqfile,genomefile):
     '''Takes a ChIP peak file, uses a PWM to predict the binding intensity
     for every kmer (length according to the model) in each peak, returns all scores.'''
     dataseqfile = os.path.splitext(seqfile)[0]+'_sequences.txt' #getting the file name
-    
+
     ### Checking if this file already contains sequences, so we don't have to bother getting them
     seqdata = read_data(seqfile)
     linetest = seqdata[0] #getting the first line from the file for testing
     seqloc = 0
-    
+
     if len(linetest) > 3:
         for col in linetest[3:]: #for each column, starting with the 4th (cant be in first three)
             if not re.search(r'[^ATGC]', col) and len(col) == int(linetest[2]) - int(linetest[1]): # if this column contains only A, T, G, or C, and is the right length
@@ -651,13 +651,13 @@ def binding_prediction_PWM_chipall(pwmfile,seqfile,genomefile):
         ### Writing this to a new file name. Note, if the last column was the sequence, we're only renaming the file
         print "writing these to", dataseqfile
         f_seqs=open(dataseqfile, 'w', 1)
-        for line in seqdata: 
+        for line in seqdata:
             print >>f_seqs, ("\t".join(map(str,line)))
         f_seqs.close
         if len(read_data(dataseqfile)) == 0: sys.exit("The sequence file was not created properly: exiting!")
         else: print "sequence file was not empty, using this..."
     else: print "no sequence found in input file"
-     
+
     ### Creating the sequence file
     if not os.path.isfile(dataseqfile): #If the file doesn't already exist (i.e. wasn't created above, or any time in the past
         print 'Generating the sequences for the data sets...'
@@ -678,29 +678,29 @@ def binding_prediction_PWM_chipall(pwmfile,seqfile,genomefile):
         print 'Loading the data sets with sequences generated previously (delete or rename them if you want generate new ones)'
         #print >>f, 'The file'
         #data = read_data(seqfile)
-    
-    if seqtype == 'fwd': 
+
+    if seqtype == 'fwd':
         datascorefile = outprefix+'_'+os.path.splitext(modelfile)[0]+'_FWD_PWM-scores.txt'
         print >>f_info, "Finding the scores for only sequences in the forward direction"
-    elif seqtype == 'rev': 
+    elif seqtype == 'rev':
         datascorefile = outprefix+'_'+os.path.splitext(modelfile)[0]+'_REV_PWM-scores.txt'
         print >>f_info, "Finding the scores for only sequences in the reverse direction"
     elif seqtype == 'best':
         datascorefile = outprefix+'_'+os.path.splitext(modelfile)[0]+'_PWM-scores.txt'
         print >>f_info, "Finding the best score of both the forward and reverse sequences"
-    
+
     print >>f_info, 'Scores are being written to: ', datascorefile
     print 'Getting scores for sequences using PWM...'
     peakscores_by_PWM(read_data(dataseqfile),pwmfile,datascorefile)
     return datascorefile
 
 def peakscores_by_PWM(chipdata,pwmfile,outfile):
-    '''Takes a ChIP file in a format with col1 = chromosome, col2 = seqstart, col3 = seqend, and the last 
-    column has the sequence for that peak, gets the predicted intensity for all sub-sequences (length is 
-    defined in the model file) in each peak, Now also checks if the outfile already exists, and starts 
+    '''Takes a ChIP file in a format with col1 = chromosome, col2 = seqstart, col3 = seqend, and the last
+    column has the sequence for that peak, gets the predicted intensity for all sub-sequences (length is
+    defined in the model file) in each peak, Now also checks if the outfile already exists, and starts
     where it left off in case of incomplete run. "outfile" is the name of the desired output file. Make
     sure to edit the lines below when testing what the core sequence so that it matches the models used.'''
-    
+
     ### Checking if outfile exists, and if incomplete, to continue where it left off
     linestart = 0
     if os.path.isfile(outfile): #if file exists
@@ -710,13 +710,13 @@ def peakscores_by_PWM(chipdata,pwmfile,outfile):
             linestart = len(read_data(outfile)) #the number of completed lines
             print "Restarting incomplete run at line", linestart
             f=open(outfile, 'a', 1) #append to file, to continue where it left off
-        else: 
-            print "File is already complete, delete it if you want to re-run.", outfile 
+        else:
+            print "File is already complete, delete it if you want to re-run.", outfile
             return #exiting this module because the file is already done
-    else: 
+    else:
         print "Writing results to:", outfile
         f=open(outfile, 'w', 1) #if file doesn't exist, create a new one
-    
+
     for n1 in range(linestart,len(chipdata)):
         #print "getting sequence scores for", n1+1, "out of", len(chipdata)
         line = chipdata[n1]
@@ -725,13 +725,13 @@ def peakscores_by_PWM(chipdata,pwmfile,outfile):
         allscores = pwm_big_seq_score(pwmfile,peak)
         ### creating the output line, with all the scores
         lineout = [line[0],line[1],line[2]] #columns are Chromosome, Start, Stop (can add sequence here, if needed, as "line[3]")
-        for line2 in allscores: 
+        for line2 in allscores:
             lineout.append(line2[0])
         print >>f, "\t".join(map(str,lineout)) #writing this to the file
     f.close()
-        
+
 def pwm_big_seq_score(pwmfile,sequence):
-    '''Takes a sequence, and gets the PWM score for all kmers the size of the pwm. Note, gets the PWM score for the 
+    '''Takes a sequence, and gets the PWM score for all kmers the size of the pwm. Note, gets the PWM score for the
     reverse complement, and reports the larger of the two for that position'''
     import sys, re
     pwm = read_pwm(pwmfile)
@@ -758,14 +758,14 @@ def pwm_big_seq_score(pwmfile,sequence):
                 pwmline = baseorder.index(base)
                 basevalue = pwm[pwmline][i+1]
                 score_r += basevalue
-            
+
 #             score = max(scoreF,scoreR) #using the highest PWM score from the forward or reverse sequence
             #changethis (remove line below) when done testing
             if seqtype == 'fwd': newscore = float(score_f)
             elif seqtype == 'rev': newscore = float(score_r)
             elif seqtype == 'best': newscore = max([float(score_f),float(score_r)])
             else: sys.exit("seqtype parameter in the program is not valid; must be 'fwd', 'rev', or 'best' ")
-            
+
 #             print "fwd:", kmer, scoreF, "rev:", kmerR, scoreR, "max:", score
                 #print basevalue, "score so far", score
 #         print "...score is", score
@@ -773,28 +773,28 @@ def pwm_big_seq_score(pwmfile,sequence):
     return results
 
 def scores_by_PWM(chipdata,pwmfile,outfile):
-    '''Takes a ChIP file in a format with col1 = chromosome, col2 = seqstart, col3 = seqend, and the last 
-    column has the sequence for that peak, gets the predicted intensity for all sub-sequences (length is 
-    defined in the model file) in each peak, Now also checks if the outfile already exists, and starts 
+    '''Takes a ChIP file in a format with col1 = chromosome, col2 = seqstart, col3 = seqend, and the last
+    column has the sequence for that peak, gets the predicted intensity for all sub-sequences (length is
+    defined in the model file) in each peak, Now also checks if the outfile already exists, and starts
     where it left off in case of incomplete run. "outfile" is the name of the desired output file. Make
     sure to edit the lines below when testing what the core sequence so that it matches the models used.'''
-    
+
     ### Checking if outfile exists, and if incomplete, to continue where it left off
     linestart = 0
     if os.path.isfile(outfile): #if file exists
         print "Warning!  Output file already exists!"
-        if (len(read_data(outfile))) < (len(chipdata)): # if file is incomplete 
+        if (len(read_data(outfile))) < (len(chipdata)): # if file is incomplete
             linestart = len(read_data(outfile)) #the number of completed lines
             print "Restarting incomplete run at line", linestart
             f=open(outfile, 'a', 1) #append to file, to continue where it left off
-        else: 
-            print "File is already complete, delete it if you want to re-run.", outfile 
+        else:
+            print "File is already complete, delete it if you want to re-run.", outfile
             return #exiting this module because the file is already done
-    else: 
+    else:
         print "Writing results to:", outfile
         f=open(outfile, 'w', 1) #if file doesn't exist, create a new one
-    
-    
+
+
     for n1 in range(linestart,len(chipdata)):
         #print "getting sequence scores for", n1+1, "out of", len(chipdata)
         line = chipdata[n1]
@@ -803,29 +803,29 @@ def scores_by_PWM(chipdata,pwmfile,outfile):
         allscores = pwm_big_seq_score(pwmfile,peak)
         ### creating the output line, with all the scores
         lineout = [line[0],line[1],line[2]] #columns are Chromosome, Start, Stop (can add sequence here, if needed, as "line[3]")
-        for line2 in allscores: 
+        for line2 in allscores:
             lineout.append(line2[0])
         print >>f, "\t".join(map(str,lineout)) #writing this to the file
     f.close()
-        
+
 def PWM_ROC(modelfile,posscorefile,negscorefile):
-    '''The goal here is to take a libsvm regression model for binding, a positive set of sequences (i.e. ChIP peaks), 
+    '''The goal here is to take a libsvm regression model for binding, a positive set of sequences (i.e. ChIP peaks),
     and a negative set of sequences (i.e. DNAse not overlapping ChIP peaks), and builds a table for making an ROC plot'''
-    
+
     posscoredata = read_data(posscorefile)
     negscoredata = read_data(negscorefile)
-    
-    
+
+
     ### For each data set, getting the maximum score for each sequence, and only keeping this as 4th column
     print "\n\nfinding the max score"
     for data in [posscoredata, negscoredata]:
         for i in range(len(data)):
             try: maxscore = max([float(x) for x in data[i][3:]])
-            except: 
+            except:
                 print "an error occured finding the max PWm score:", i
                 print "scores are", [data[i][3:]]
             data[i] = data[i][:3] + [maxscore] #re-writing the line to only include chromosome, start position, stop position, and max score
-    
+
     ### Finding the max and min from the two data sets
     high, low = -99,99
     for data in [posscoredata, negscoredata]:
@@ -834,17 +834,17 @@ def PWM_ROC(modelfile,posscorefile,negscorefile):
             if score > float(high): high = score
             if score < float(low) and score != 0: low = score
     print "For ROC, high score is", high, "and low score is", low
-     
+
     ### Getting the list of cutoffs to use
     cutoffs = []
     counter = low
     size = 1000 # how many points we want in the list
-    
+
     for x in range(size):
         cutoffs.append(counter)
         counter += (((high-low)/size) )
     cutoffs.append(high) # we need to be inclusive of the max value for the cutoff
-     
+
     ### Building the TPR/FPR table for every score cutoff
     ROCdata = []
     for cutoff in cutoffs:
@@ -853,12 +853,12 @@ def PWM_ROC(modelfile,posscorefile,negscorefile):
         #print "looking at positive controls"
         for line in posscoredata: # Getting TP and FN
             #print line[3], cutoff
-            if float(line[3]) >= cutoff: TP += 1 # If this positive control has a score above the cutoff, then this a true positive 
+            if float(line[3]) >= cutoff: TP += 1 # If this positive control has a score above the cutoff, then this a true positive
             else: FN += 1 # If this is below the cutoff, then this is a false negative
         #print "looking at negative controls"
         for line in negscoredata:
             #print line[3]
-            if float(line[3]) < cutoff: TN += 1 # If this negative control has a score below the cutoff, then this a true negative 
+            if float(line[3]) < cutoff: TN += 1 # If this negative control has a score below the cutoff, then this a true negative
             else: FP += 1 # If this is above the cutoff, then this is a false positive
 #         print cutoff, TP, FN, FP, TN, '\n'
         TPR = float(TP)/(float(TP)+float(FN))
@@ -869,12 +869,12 @@ def PWM_ROC(modelfile,posscorefile,negscorefile):
     f=open(outfile, 'w')
     for line in ROCdata: print >>f, "\t".join(map(str,line))
     f.close
-    
+
     auc = AUC(ROCdata)
-    print 'AUC is', auc    
+    print 'AUC is', auc
     print >>f_info, 'AUC is', auc
-    
-def AUC(data):  
+
+def AUC(data):
     '''Taking a set of x,y data points, and calculating the area under the curve from these points'''
     AUC = 0
     for i in range(len(data)-1): #needs to be -1 because (i+1) for the last point won't work.
@@ -906,12 +906,12 @@ def AUC(data):
 #     length,k = seqlengths[0]
 # elif len(seqlengths) == 0:
 #     print "Sequence length and feature kmer length cannot be determined given a total of", featnum, "features. Check the libsvm model file for errors."
-# else: 
+# else:
 #     print "\nMultiple possibilities for sequence length exist. Choose the appropriate one."
 #     for j in range(len(seqlengths)):
 #         print "["+str(j+1)+"]",  "Length of sequence", seqlengths[j][0], ": feature kmers of length", seqlengths[j][1]
 #     while True:
-#         try: 
+#         try:
 #             answer = int(raw_input("\nChoose the best option from above:\n"))
 #         except ValueError:
 #             print "Please enter an appropriate number"
@@ -923,7 +923,7 @@ def AUC(data):
 #             break
 #     length,k = seqlengths[answer-1]
 # print "Length is ", length, ": k is", k
-    
+
 if runtype == 'SVR':
     seqscorefile = binding_prediction_chipall(modelfile,seqfile,genomefile)
     if args.negseqfile:
