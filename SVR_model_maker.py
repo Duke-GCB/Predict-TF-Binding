@@ -384,17 +384,17 @@ def libsvm_run(c,p,pbmfile):
         f2.close()
         
         ###Training the model
+        modelfile = trainmatrixfile + ".model" # specify the model file name to svm-train, otherwise it writes in current dir
         print 'Training the model for run', x+1, '...'
-        command = "svm-train -s 3 -t 0 -c " + str(c) + " -p " + str(p) + " " + trainmatrixfile #the command we want to run
+        command = "svm-train -s 3 -t 0 -c " + str(c) + " -p " + str(p) + " " + trainmatrixfile + " " + modelfile #the command we want to run
         args = string.split(command) #we need to split these into individual items
         output, error = Popen(args, stdout = PIPE, stderr = PIPE).communicate() #running the command, and storing the results
         if len(error) > 0: #if running the command caused an error, print the error
             print error
         out = string.split(output, '\n') #Splitting the output by line
-         
+
         ###testing the model
         print 'Testing the model for run', x+1, '...'
-        modelfile = trainmatrixfile + ".model"
         outfile = testmatrixfile[0:-4]+'_SVR-prediction.txt'
         args = ["svm-predict", testmatrixfile, modelfile, outfile]
         output, error = Popen(args, stdout = PIPE, stderr = PIPE).communicate() #running the command, and storing the results
