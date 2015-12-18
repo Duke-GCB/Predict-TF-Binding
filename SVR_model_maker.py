@@ -202,7 +202,7 @@ def libsvm_run_gridsearch(p_list,c_list,pbmfile):
     
     ### Create your own module for selecting sequences from the PBM file for your protein
     print "\nFinding good sequences from the pbmfile to use for SVR"
-    seqlist = read_data(pbmfile)
+    seqlist = read_pbm_sequences(pbmfile)
     
     ### Creating the matrix file
     print "Generating matrix file for grid search..."
@@ -246,14 +246,24 @@ def libsvm_run_gridsearch(p_list,c_list,pbmfile):
     print >>f_info, '\nBest R squared is ', best[0], ' - with c = ', best[1], ' and p = ', best[2]
     print '\nBest R squared is ', best[0], ' - with c = ', best[1], ' and p = ', best[2]
 
+PBM_SCORE_COLUMN = 5
+PBM_SEQUENCE_COLUMN = 2
+
+def read_pbm_sequences(pbmfile):
+    data = read_data(pbmfile) # Read the PBM file into a list of lists
+    print "\nReading sequences from the PBM file"
+    data = data[1:] # Remove the header row
+    # Extract the score and the sequence
+    return [[float(row[PBM_SCORE_COLUMN]), row[PBM_SEQUENCE_COLUMN]] for row in data]
+
 def libsvm_run(c,p,pbmfile):
     ''' Using libsvm, for running the best set of values (best if obtained from a grid search), using the train and test matrix files'''
     
     ### Create your own module for selecting sequences from the PBM file for your protein
     print "\nFinding good sequences from the pbmfile to use for SVR"
-    allseqlist = read_data(pbmfile)
+    allseqlist = read_pbm_sequences(pbmfile)
 
-    print "Using", len(allseqlist), "sequences (includes reverse complements)"
+    print "Using", len(allseqlist), "sequences"
     traincount = int(float(len(allseqlist)) * ((float(svrbins)-1)/float(svrbins)))
     print "Using about", traincount, "sequences (+/-1) out of", len(allseqlist), "for training the model" #plus or minus 1, for each of the binned sets
     print >>f_info, "Using about", traincount, "sequences (+/-1) out of", len(allseqlist), "for training the model" #plus or minus 1, for each of the binned sets
