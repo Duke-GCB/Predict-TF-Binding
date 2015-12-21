@@ -36,6 +36,8 @@ parser.add_argument('-g', "--gridsearch",
                     action="store_true")
 parser.add_argument('--seqlength', metavar='SequenceLength',
                     help="Change the length of the PBM sequence (Default is 36, new sequence will remain centered according to original 36mer from PBM data)",
+                    default=36,
+                    type=int,
                     dest="length")
 parser.add_argument('--feature', metavar='FeatureType',
                     help="Define the type of features, i.e. 2 for 2mers, 123 for 1, 2, and 3-mers, etc; default is 3 for 3mers",
@@ -55,7 +57,7 @@ parser.add_argument('--searchstrings', metavar='SearchStrings',
                     spaces, e.g. --searchstrings GCGG CCGC GCGC. Note that all search strings must be the same length,
                     and must be same parity (even or odd) as the sequence length """,
                     dest='searchstrings',
-                    nargs='*',
+                    nargs='+',
                     required=True
                     )
 args = parser.parse_args()
@@ -136,10 +138,7 @@ else:
 ''' Other Parameters ================================================================='''
 ### Different parameters used during the process that can be changed from there defaults here
 
-if args.length:
-    length = int(args.length)
-else:
-    length = 36  # Assigning the default value
+length = int(args.length)
 if args.rawkmer:
     rawkmer = args.rawkmer
 else:
