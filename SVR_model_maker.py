@@ -8,13 +8,14 @@ Created on Nov 12, 2014
 
 import argparse
 import itertools
-import numpy
 import random
 import string
 import time
 from distutils.util import strtobool
 from operator import itemgetter
 from subprocess import *
+
+import numpy
 
 # ===============================================================================
 #  Command Line Arguments
