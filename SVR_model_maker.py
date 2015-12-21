@@ -518,17 +518,16 @@ print >> f_info, '\n============================================================
     '\n ', length, '  <-- Sequence Length', \
     '\n ', kinfo, '  <-- Feature type', \
     '\n ', svrbins, '  <-- Number bins we split the sequences into for SVR, where for each bin, it is used for testing, with the rest used for training the model', \
-    '\n  Linear   <-- LibSVM support vector regression model type', \
- \
-    if args.gridsearch:
-        print "Running a grid search. Use the results and re-run this program to refine another grid search, or run full LibSVM"
-        print "\nCost values to be tested:", c_list, "\nEpsilon values to be tested:", p_list
-        print >> f_info, '\n ', c_list, '  <-- LibSVM costs tested', '\n ', p_list, '  <-- LibSVM epsilons tested\n'
-        libsvm_run_gridsearch(p_list, c_list, pbmfile)
+    '\n  Linear   <-- LibSVM support vector regression model type',
+if args.gridsearch:
+    print "Running a grid search. Use the results and re-run this program to refine another grid search, or run full LibSVM"
+    print "\nCost values to be tested:", c_list, "\nEpsilon values to be tested:", p_list
+    print >> f_info, '\n ', c_list, '  <-- LibSVM costs tested', '\n ', p_list, '  <-- LibSVM epsilons tested\n'
+    libsvm_run_gridsearch(p_list, c_list, pbmfile)
 
-    else:
-        print "Running full libsvm"
-        print >> f_info, '\n ', c, '  <-- LibSVM cost', '\n ', p, '  <-- LibSVM epsilon\n'
-        libsvm_run(c, p, pbmfile)
+else:
+    print "Running full libsvm"
+    print >> f_info, '\n ', c, '  <-- LibSVM cost', '\n ', p, '  <-- LibSVM epsilon\n'
+    libsvm_run(c, p, pbmfile)
 
 f_info.close()
