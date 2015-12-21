@@ -22,7 +22,7 @@ import numpy
 # ===============================================================================
 #  Command Line Arguments
 
-parser = argparse.ArgumentParser(description='E2F Binding Model')
+parser = argparse.ArgumentParser(description='Binding Model')
 parser.add_argument('-i', metavar='PBMFile',
                     help='The results of a custom PBM experiment with sequences centered by binding site (i.e. using PWM)',
                     dest='pbmfile',
@@ -48,6 +48,15 @@ parser.add_argument('-c', metavar='SVR_cost',
 parser.add_argument('-p', metavar='SVR_epsilon',
                     help='The epsilon value input for LibSVM. If running a grid search, this should be a string of numbers in quotes, i.e. "0.05 0.1 0.5".',
                     dest='p')
+parser.add_argument('--searchstrings', metavar='SearchStrings',
+                    help="""
+                    Central core of nucleotides for which to search. multiple strings should be separated with
+                    spaces, e.g. --searchstrings GCGG CCGC GCGC. Note that all search strings must be the same length,
+                    and must be same parity (even or odd) as the sequence length """,
+                    dest='searchstrings',
+                    nargs='*',
+                    required=True
+                    )
 args = parser.parse_args()
 pbmfile = args.pbmfile
 
@@ -142,11 +151,7 @@ kinfo = ''
 for x in kmers: kinfo = kinfo + str(x) + " + "
 kinfo = kinfo[:-3] + " mer features"
 
-# In the case of E2Fs, we want to make sure that good sequences have a good
-# central core, without having a high-affinity 4-mer in the flanking sequences.
-# Set this to [''] to use all sequences (i.e. every 4mer is good in the flanks
-# and the core)
-searchstrings = ['GCGG', 'CCGC', 'GCGC']
+searchstrings = args.searchstrings
 
 # Number bins we split the sequences into for SVR, where one bin is used for
 # testing the model, and the remaining bins are combined for the training sequences.
