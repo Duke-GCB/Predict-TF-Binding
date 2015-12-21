@@ -204,6 +204,7 @@ def libsvm_run_gridsearch(p_list,c_list,pbmfile):
     ### Create your own module for selecting sequences from the PBM file for your protein
     print "\nFinding good sequences from the pbmfile to use for SVR"
     seqlist = read_pbm_sequences(pbmfile)
+    check_data_length(seqlist)
     ### Creating the matrix file
     print "Generating matrix file for grid search..."
     svrmatrix = libsvm_generate_matrix(seqlist)[0]
@@ -256,12 +257,21 @@ def read_pbm_sequences(pbmfile):
     # Extract the score and the sequence
     return [[float(row[PBM_SCORE_COLUMN]), row[PBM_SEQUENCE_COLUMN]] for row in data]
 
+MAX_NUM_SEQUENCES = 5000
+
+def check_data_length(seqlist):
+    if len(seqlist) > MAX_NUM_SEQUENCES:
+        print "Error: PBM file contains {} sequences, which exceeds the maximum of {}".format(len(seqlist), MAX_NUM_SEQUENCES)
+        sys.exit(1)
+
 def libsvm_run(c,p,pbmfile):
     ''' Using libsvm, for running the best set of values (best if obtained from a grid search), using the train and test matrix files'''
 
     ### Create your own module for selecting sequences from the PBM file for your protein
     print "\nFinding good sequences from the pbmfile to use for SVR"
     allseqlist = read_pbm_sequences(pbmfile)
+
+    check_data_length(allseqlist)
 
     print "Using", len(allseqlist), "sequences"
     traincount = int(float(len(allseqlist)) * ((float(svrbins)-1)/float(svrbins)))
