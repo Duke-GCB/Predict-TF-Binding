@@ -473,7 +473,7 @@ def libsvm_feature_weights(modelfile):
                     feature[1])  # finding the weight of each feature (= sequence weight x feature value)
             weights[int(feature[0])] = weights[int(
                     feature[0])] + weight  # updating the dictionary to account for the total weights for each feature
-            counts[int(feature[0])] = counts[int(feature[0])] + int(feature[1])
+            counts[int(feature[0])] += int(feature[1])
             #             print 'Feature number is', feature[0], 'and value is', feature[1], 'weight is', line[0], 'val is', weight, 'count is',counts[int(feature[0])]
             #    print weights
             #    for x in range(1,346): print (x+1), "\t", weights[x]
