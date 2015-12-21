@@ -211,9 +211,9 @@ def libsvm_generate_matrix(seqlist):
         features = [score]  # starting a new list for building the matrix for SVR
         for x in range(1, len(featureinfo)):  # for every feature, in this list (skipping first item because header)
             features.append(
-                str(featureinfo[x][2]) + ':' + str(featureinfo[x][3]))  # putting the feature values into the list
+                    str(featureinfo[x][2]) + ':' + str(featureinfo[x][3]))  # putting the feature values into the list
         svrmatrix.append(
-            features)  # adding the features for each sequence to the master list of features for this set of sequences
+                features)  # adding the features for each sequence to the master list of features for this set of sequences
     return svrmatrix, featureinfo
 
 
@@ -246,7 +246,7 @@ def libsvm_run_gridsearch(p_list, c_list, pbmfile):
             print "\nTesting epsilon =", p, "and cost =", c
             pvals.append(p)
             command = "svm-train -s 3 -v 5 -t 0 -c " + str(c) + " -p " + str(
-                p) + " " + matrixfile  # the command we want to run
+                    p) + " " + matrixfile  # the command we want to run
             args = string.split(command)  # we need to split these into individual items
             output, error = Popen(args, stdout=PIPE,
                                   stderr=PIPE).communicate()  # running the command, and storing the results
@@ -306,9 +306,9 @@ def libsvm_run(c, p, pbmfile):
     print "Using", len(allseqlist), "sequences"
     traincount = int(float(len(allseqlist)) * ((float(svrbins) - 1) / float(svrbins)))
     print "Using about", traincount, "sequences (+/-1) out of", len(
-        allseqlist), "for training the model"  # plus or minus 1, for each of the binned sets
+            allseqlist), "for training the model"  # plus or minus 1, for each of the binned sets
     print >> f_info, "Using about", traincount, "sequences (+/-1) out of", len(
-        allseqlist), "for training the model"  # plus or minus 1, for each of the binned sets
+            allseqlist), "for training the model"  # plus or minus 1, for each of the binned sets
 
     random.shuffle(allseqlist)  # randomizing the list
     seqbins = list_bins(allseqlist, svrbins)
@@ -318,7 +318,7 @@ def libsvm_run(c, p, pbmfile):
         print "\nRunning SVR on round", x + 1, "of", len(seqbins)
         testseq = seqbins[x]
         trainseq = list(itertools.chain(*(
-        seqbins[:x] + seqbins[x + 1:])))  # Note, the remaining bins need to be collapsed into a single list of lists
+            seqbins[:x] + seqbins[x + 1:])))  # Note, the remaining bins need to be collapsed into a single list of lists
         # print >>f_info, 'Number of sequences in the training data set is', len(trainseq), 'out of', len(allseqlist), 'sequences'
         print "Generating the matrix files..."
         trainmatrix, featureinfo = libsvm_generate_matrix(trainseq)
@@ -338,7 +338,7 @@ def libsvm_run(c, p, pbmfile):
         modelfile = trainmatrixfile + ".model"  # specify the model file name to svm-train, otherwise it writes in current dir
         print 'Training the model for run', x + 1, '...'
         command = "svm-train -s 3 -t 0 -c " + str(c) + " -p " + str(
-            p) + " " + trainmatrixfile + " " + modelfile  # the command we want to run
+                p) + " " + trainmatrixfile + " " + modelfile  # the command we want to run
         args = string.split(command)  # we need to split these into individual items
         output, error = Popen(args, stdout=PIPE,
                               stderr=PIPE).communicate()  # running the command, and storing the results
@@ -450,13 +450,13 @@ def libsvm_feature_weights(modelfile):
     featnum = 2  # starting the feature number at 2, because the first feature is just '1:1'
     #     print model[0][0]
     seqsize = (len(model[0][0].split()) - 2) / (len(bases)) + (
-    k - 1)  # convoluted way of getting the size of the sequence used
+        k - 1)  # convoluted way of getting the size of the sequence used
     for x in range(1, seqsize + 1 - (k - 1)):  # for each position in the sequence, starting with 1 (instead of 0)
         for base in bases:
             # print featnum, "\t", x, "\t", base
             features.append([featnum, x, base])
             featnum += 1
-        #         print features
+            #         print features
     weights = {key: 0 for key in
                range(1, len(features) + 2)}  # dictionary to hold the value of the weights for each feature
     counts = {key: 0 for key in range(1, len(features) + 2)}
@@ -473,9 +473,9 @@ def libsvm_feature_weights(modelfile):
             weights[int(feature[0])] = weights[int(
                     feature[0])] + weight  # updating the dictionary to account for the total weights for each feature
             counts[int(feature[0])] = counts[int(feature[0])] + int(feature[1])
-        #             print 'Feature number is', feature[0], 'and value is', feature[1], 'weight is', line[0], 'val is', weight, 'count is',counts[int(feature[0])]
-        #    print weights
-        #    for x in range(1,346): print (x+1), "\t", weights[x]
+            #             print 'Feature number is', feature[0], 'and value is', feature[1], 'weight is', line[0], 'val is', weight, 'count is',counts[int(feature[0])]
+            #    print weights
+            #    for x in range(1,346): print (x+1), "\t", weights[x]
     output = [['Feature_Number', 'Feature_Weight', 'Position', 'Feature', 'Count']]
     print "Writing the output"
     for n3 in range(len(weights) - 1):
@@ -512,7 +512,7 @@ print >> f_info, '\n============================================================
     '\nGenerating the SVR model file, using libsvm', \
     '\n\nParamaters used in this run:', \
     '\n ', " ".join(
-    map(str, searchstrings)), '  <-- Good core 4-mers used for selecting sequences for building the model', \
+        map(str, searchstrings)), '  <-- Good core 4-mers used for selecting sequences for building the model', \
     '\n ', args.pbmfile, '  <-- Input PBM file', \
     '\n ', outprefix, '  <-- Output file pfrefix', \
     '\n ', length, '  <-- Sequence Length', \
@@ -520,15 +520,15 @@ print >> f_info, '\n============================================================
     '\n ', svrbins, '  <-- Number bins we split the sequences into for SVR, where for each bin, it is used for testing, with the rest used for training the model', \
     '\n  Linear   <-- LibSVM support vector regression model type', \
  \
-if args.gridsearch:
-    print "Running a grid search. Use the results and re-run this program to refine another grid search, or run full LibSVM"
-    print "\nCost values to be tested:", c_list, "\nEpsilon values to be tested:", p_list
-    print >> f_info, '\n ', c_list, '  <-- LibSVM costs tested', '\n ', p_list, '  <-- LibSVM epsilons tested\n'
-    libsvm_run_gridsearch(p_list, c_list, pbmfile)
+    if args.gridsearch:
+        print "Running a grid search. Use the results and re-run this program to refine another grid search, or run full LibSVM"
+        print "\nCost values to be tested:", c_list, "\nEpsilon values to be tested:", p_list
+        print >> f_info, '\n ', c_list, '  <-- LibSVM costs tested', '\n ', p_list, '  <-- LibSVM epsilons tested\n'
+        libsvm_run_gridsearch(p_list, c_list, pbmfile)
 
-else:
-    print "Running full libsvm"
-    print >> f_info, '\n ', c, '  <-- LibSVM cost', '\n ', p, '  <-- LibSVM epsilon\n'
-    libsvm_run(c, p, pbmfile)
+    else:
+        print "Running full libsvm"
+        print >> f_info, '\n ', c, '  <-- LibSVM cost', '\n ', p, '  <-- LibSVM epsilon\n'
+        libsvm_run(c, p, pbmfile)
 
 f_info.close()
