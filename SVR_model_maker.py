@@ -158,11 +158,16 @@ kinfo = kinfo[:-3] + " mer features"
 
 searchstrings = args.searchstrings
 
-num_unique_searchstring_lengths = len(set(map(len, searchstrings)))
-if num_unique_searchstring_lengths != 1:
+unique_searchstring_lengths = set(map(len, searchstrings))
+if len(unique_searchstring_lengths) != 1:
     print "Error: Search strings must be uniform length"
     sys.exit(1)
 
+searchstring_length = list(unique_searchstring_lengths)[0]
+if (searchstring_length + length) % 2 == 1: # Must both be even or both be odd
+    print "Error: Search string length ({0}) and sequence length ({1}) must both be even or both be " \
+          "odd".format(searchstring_length, length)
+    sys.exit(1)
 
 # Number bins we split the sequences into for SVR, where one bin is used for
 # testing the model, and the remaining bins are combined for the training sequences.
