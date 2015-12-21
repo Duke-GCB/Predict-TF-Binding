@@ -421,7 +421,7 @@ def libsvm_run(c, p, pbmfile):
     resultsfile = outprefix + '_SVR-test_prediction-results.txt'
     f = open(resultsfile, 'w', 1)
     for line in bestresults: print >> f, ("\t".join(map(str, line)))
-    f.close
+    f.close()
 
     ### Writing info to the info file
     print >> f_info, "\nOutput files for best run are:"
@@ -485,7 +485,7 @@ def libsvm_feature_weights(modelfile):
     # for line in output: print "\t".join(map(str,line))
     f = open(modelfile[:-10] + '-weights.txt', "w")
     for line in output: print >> f, "\t".join(map(str, line))
-    f.close
+    f.close()
     return output
 
 
