@@ -3,7 +3,8 @@
 """
 Created on Nov 12, 2014
 
-@author: josh
+@author Josh Schipper
+@author Dan Leehr <dan.leehr@duke.edu>
 """
 
 import argparse
