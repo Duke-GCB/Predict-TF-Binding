@@ -345,7 +345,6 @@ def libsvm_run(c, p, pbmfile):
                               stderr=PIPE).communicate()  # running the command, and storing the results
         if len(error) > 0:  # if running the command caused an error, print the error
             print error
-        out = string.split(output, '\n')  # Splitting the output by line
 
         ###testing the model
         print 'Testing the model for run', x + 1, '...'
