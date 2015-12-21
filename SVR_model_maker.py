@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-'''
+"""
 Created on Nov 12, 2014
 
 @author: josh
-'''
+"""
 
 import argparse
 import itertools
@@ -163,7 +163,7 @@ def yes_no_query(question):
 
 
 def read_data(filename):
-    ''' Creates an array for every cell in a tab separated text file'''
+    """ Creates an array for every cell in a tab separated text file"""
     data = []
     try:
         f = open(filename, 'r')  # opens the file as "f"
@@ -179,13 +179,13 @@ def read_data(filename):
 
 
 def list_bins(l, bins):
-    '''Takes some list l and breaks it up into bins'''
+    """Takes some list l and breaks it up into bins"""
     n = float(len(l)) / bins
     return [l[int(n * i):int(n * (i + 1))] for i in range(bins)]
 
 
 def libsvm_generate_matrix(seqlist):
-    '''Generates the matrix file from a list of sequences and their scores'''
+    """Generates the matrix file from a list of sequences and their scores"""
     svrmatrix = []
     for line in seqlist:
         score, seq = line
@@ -218,7 +218,7 @@ def libsvm_generate_matrix(seqlist):
 
 
 def libsvm_run_gridsearch(p_list, c_list, pbmfile):
-    ''' Using libsvm, runs a grid search varying cost and epsilon, then prints a table of results, followed by the best R squared'''
+    """ Using libsvm, runs a grid search varying cost and epsilon, then prints a table of results, followed by the best R squared"""
     test = 0
     results = []
 
@@ -295,7 +295,7 @@ def check_data_length(seqlist):
 
 
 def libsvm_run(c, p, pbmfile):
-    ''' Using libsvm, for running the best set of values (best if obtained from a grid search), using the train and test matrix files'''
+    """ Using libsvm, for running the best set of values (best if obtained from a grid search), using the train and test matrix files"""
 
     ### Create your own module for selecting sequences from the PBM file for your protein
     print "\nFinding good sequences from the pbmfile to use for SVR"
@@ -318,7 +318,8 @@ def libsvm_run(c, p, pbmfile):
         print "\nRunning SVR on round", x + 1, "of", len(seqbins)
         testseq = seqbins[x]
         trainseq = list(itertools.chain(*(
-            seqbins[:x] + seqbins[x + 1:])))  # Note, the remaining bins need to be collapsed into a single list of lists
+            seqbins[:x] + seqbins[
+                          x + 1:])))  # Note, the remaining bins need to be collapsed into a single list of lists
         # print >>f_info, 'Number of sequences in the training data set is', len(trainseq), 'out of', len(allseqlist), 'sequences'
         print "Generating the matrix files..."
         trainmatrix, featureinfo = libsvm_generate_matrix(trainseq)
@@ -437,7 +438,7 @@ def libsvm_run(c, p, pbmfile):
 
 
 def libsvm_feature_weights(modelfile):
-    ''' Getting feature weights, using the output from libsvm, with features of size k, works with sequences of variable sizes'''
+    """ Getting feature weights, using the output from libsvm, with features of size k, works with sequences of variable sizes"""
     # print 'Getting feature weights from', modelfile
     model = read_data(modelfile)[6:]  # Starting with row 7, to avoid header lines
     k = kmers[-1]
