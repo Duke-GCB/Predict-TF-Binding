@@ -13,6 +13,7 @@ import random
 import string
 import time
 import os
+import sys
 from distutils.util import strtobool
 from operator import itemgetter
 from subprocess import *
@@ -151,7 +152,17 @@ kinfo = ''
 for x in kmers: kinfo = kinfo + str(x) + " + "
 kinfo = kinfo[:-3] + " mer features"
 
+# User-specified Search strings.
+# 1. Must all be uniform length
+# 2. Must be same parity as sequence length
+
 searchstrings = args.searchstrings
+
+num_unique_searchstring_lengths = len(set(map(len, searchstrings)))
+if num_unique_searchstring_lengths != 1:
+    print "Error: Search strings must be uniform length"
+    sys.exit(1)
+
 
 # Number bins we split the sequences into for SVR, where one bin is used for
 # testing the model, and the remaining bins are combined for the training sequences.
