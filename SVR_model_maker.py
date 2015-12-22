@@ -316,6 +316,11 @@ def check_data_length(seqlist):
         sys.exit(1)
 
 
+def filename_from_params(base, kmers, epsilon, cost, rsquared):
+    name = '{0}_featuretype_{1}_SVR_epsilon_{2}_SVR_cost_{3}_rsquared_{4}.model'.format(base, string.join(map(str,kmers)), epsilon, cost, str(rsquared))
+    return name
+
+
 def libsvm_run(c, p, pbmfile):
     """ Using libsvm, for running the best set of values (best if obtained from a grid search), using the train and test matrix files"""
 
@@ -367,6 +372,7 @@ def libsvm_run(c, p, pbmfile):
                               stderr=PIPE).communicate()  # running the command, and storing the results
         if len(error) > 0:  # if running the command caused an error, print the error
             print error
+
 
         ###testing the model
         print 'Testing the model for run', x + 1, '...'
@@ -433,7 +439,8 @@ def libsvm_run(c, p, pbmfile):
             libsvm_feature_weights(modelfile)
             os.rename(trainmatrixfile, trainmatrixfile[:-6] + '.txt')
             os.rename(testmatrixfile, testmatrixfile[:-6] + '.txt')
-            os.rename(modelfile, trainmatrixfile[:-6] + '.txt.model')
+            renamed_modelfile = filename_from_params(trainmatrixfile[:-6], kmers, p, c, mean_rsq)
+            os.rename(modelfile, renamed_modelfile)
             os.rename(outfile, testmatrixfile[0:-6] + '_SVR-prediction.txt')
 
     bestresults = [['Actual-Intensity', 'Predicted-Intensity']]
@@ -446,10 +453,10 @@ def libsvm_run(c, p, pbmfile):
 
     ### Writing info to the info file
     print >> f_info, "\nOutput files for best run are:"
-    print >> f_info, ' ', outprefix + '_train_matrix.txt', "<-- The LibSVM matrix file for the sequences used to trian the model"
+    print >> f_info, ' ', outprefix + '_train_matrix.txt', "<-- The LibSVM matrix file for the sequences used to train the model"
     print >> f_info, ' ', outprefix + '_test_matrix.txt', "<-- The LibSVM matrix file for the sequences used to test the model"
     if extrafiles == 'yes':
-        print >> f_info, ' ', featurefile, "<-- The LibSVM matrix for the sequences used to trian the model"
+        print >> f_info, ' ', featurefile, "<-- The LibSVM matrix for the sequences used to train the model"
         print >> f_info, ' ', outprefix + '_train_sequences.txt', "<-- The actual sequences and the corresponding scores used for training the model"
         print >> f_info, ' ', outprefix + '_test_sequences.txt', "<-- The actual sequences and the corresponding scores used for testing the model"
         print >> f_info, ' ', featurefile, "<-- List of definitions for the features (the feature sequence and it's position in the complete sequence"
