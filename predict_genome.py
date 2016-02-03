@@ -1,29 +1,26 @@
 import itertools
 
+NUCLEOTIDES='ACGT'
 
 def svr_features_from_sequence(seq, kmers):
     featureinfo = [['feature', 'position', 'featnum', 'featvalue'],
                    ['start', 'na', 1, 1]]  # header, and first feature which never changes
-    featnum = 2  # the first feature is already defined as 1:1, so we start with 2
     for k in kmers:
         print "kmer: ", k
-        bases = []  # creating empty lists needed later
-        for n in itertools.product('ACGT', repeat=k): bases.append(''.join(n))  # all possible kmers with lenth k
-        for n1 in range(len(seq) - (k - 1)):  # For each position in the sequence
-            kmer = seq[n1:n1 + k]  # getting the actual kmer at this position
-            for n2 in range(len(bases)):  # for every possible kmer of the size we want
-                feature = bases[n2]  # getting the feature
-                if feature == kmer:
-                    featvalue = 1  # testing if the actual k-mer matches the feature, in which case the feature value is 1
+        # Generate all possible combinations of length k (e.g ['AAA', 'AAC', ...  'TTG', 'TTT']
+        features = [''.join(x) for x in itertools.product(NUCLEOTIDES, repeat=k)]
+        # Check each position in the sequence for a match
+        n_sub_seqs = len(seq) - (k - 1) # If seq length is 36 and k is 3, there are 34 positions
+        for position in range(n_sub_seqs):
+            sub_seq = seq[position:position + k] # the sub-sequence with length k
+            for feature_index, feature in enumerate(features):
+                if feature == sub_seq:
+                    feature_value = 1
                 else:
-                    featvalue = 0
-                featureinfo.append([feature, n1, featnum, featvalue])  # adding the info about the feature to the list
-                featnum += 1  # increasing the feature number by 1
-    features = [0]  # starting a new list for building the matrix for SVR
-    for x in range(1, len(featureinfo)):  # for every feature, in this list (skipping first item because header)
-        features.append(
-            str(featureinfo[x][2]) + ':' + str(featureinfo[x][3]))  # putting the feature values into the list
-    return features
+                    feature_value = 0
+                info = {'feature': feature, 'position': position, 'featnum': feature_index + 2, 'featvalue' : feature_value}
+                featureinfo.append(info)
+    return featureinfo
 
 
 def svr_matrix_from_seqlist(seqlist, kmers):
