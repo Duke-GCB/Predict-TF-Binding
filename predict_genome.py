@@ -48,12 +48,18 @@ def svr_features_from_sequence(seq, kmers):
                 svr_features.append(info)
     return svr_features
 
-
-def svr_matrix_from_seqlist(seqlist, kmers):
-    svrmatrix = []
-    for seq in seqlist:
-        svrmatrix.append(svr_features_from_sequence(seq, kmers))
-    return svrmatrix
+def write_svr_features(svr_features, matrixfile):
+    """
+    Writes a list of feature dictionaries to a file
+    :param svr_features: ordered list of SVR feature dictionaries
+    :param matrixfile: file name to write to
+    :return: None
+    """
+    with open(matrixfile, 'w') as f:
+        print >> f, "0\t1:1\t", # Required header for matrix file
+        # enumerate yields tuples with index (0, int) and the item (1, dict)
+        colon_separated = map(lambda x:  '{}:{}'.format(x[0] + 2,x[1]['value']), enumerate(svr_features))
+        print >> f, '\t'.join(colon_separated)
 
 
 def get_core(seq):
@@ -61,14 +67,6 @@ def get_core(seq):
 
 
 if __name__ == '__main__':
-    seqlist = ['GCCCGCAGAGCGGAAGGCGGGATGGCTGGGGGCGGG',
-               'GGGCTCAGCGCCGACTGCGCGCCTCTGCCCGCGAAA',
-               'CGCCATAGCGACGGCGCCGCAATTTAGGAGCGTGCT',
-               'TCCCGCCTTCCGCTCTGCGGGCGGCAGCCGGGCTGG']
-
-    matrix = svr_matrix_from_seqlist(seqlist, [3])
-    for seq in matrix:
-        for x in seq:
-            print x
-
-
+    sequence =  'GCCCGCAGAGCGGAAGGCGGGATGGCTGGGGGCGGG'
+    svr_features = svr_features_from_sequence(sequence, [3])
+    write_svr_features(svr_features, 'svr_matrix.txt')
