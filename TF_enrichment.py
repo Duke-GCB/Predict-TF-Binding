@@ -3,130 +3,103 @@
 import argparse, string, sys, os, time, itertools, re, operator, random
 from subprocess import *
 
-kmers = []
+print '''\nRunning the program to get scores for genomic sequences using a SVR or PWM model.
+Check example files for proper input file formats.
+Generally speaking, input files should not contain any headers.
 
-def main():
-    print '''\nRunning the program to get scores for genomic sequences using a SVR or PWM model.
-    Check example files for proper input file formats.
-    Generally speaking, input files should not contain any headers.
-
-    Note!  If the program needs to get genomic sequences, more than 3GB of memory will be required.'''
+Note!  If the program needs to get genomic sequences, more than 3GB of memory will be required.'''
 
 
-    #===============================================================================
-    #  Command Line Arguments
+#===============================================================================
+#  Command Line Arguments
 
-    parser = argparse.ArgumentParser(description = 'E2F Binding Model')
-    parser.add_argument('-t', metavar = 'RunType',
-                        help = 'Type of run, either using PWM, or SVR for finding scores',
-                        dest = 'runtype' ,
-                        choices = ['SVR','PWM'] ,
-                        required=True)
-    parser.add_argument('-g', metavar = 'GenomeFile',
-                        help = 'Genome File - Fasta format, containing the sequence for each chromosome as a separate entry',
-                        dest = 'genomefile')
-    parser.add_argument('-s', metavar = 'SequenceFile',
-                        help = 'Sequence file where the first three columns are "Chromosome Name", "Start Position", and "Stop Position" (i.e. .bed format), and may or may not also have the sequences',
-                        dest = 'seqfile' ,
-                        required=True)
-    parser.add_argument('-n', metavar = 'NegativeSequenceFile',
-                        help = "Sequence file for negative control sequences for ROC curves. If this flag is used, ROC data and AUC will be calculated. If this file contains more sequences than the input sequence file, it will be normalized. This file could be, for example, DNase hypersensitive sites that don't overlap the ChIP peaks given as the input sequence file" ,
-                        dest = 'negseqfile')
-    parser.add_argument('-m', metavar = 'ModelFile',
-                        help = 'The E2F .model file generated from LibSVM, or the PWM model file (in probabilities or log ratios)' ,
-                        dest = 'modelfile' ,
-                        required=True)
-    parser.add_argument('-o', metavar = 'OutFilePrefix',
-                        help = 'Optional, the prefix that all output files will be based on (do not include file extension)',
-                        dest = 'outprefix')
-    parser.add_argument('--direction',
-                        help =  'Optional, specify the direction of the sequences to get scores for; "fwd" for scoring the forward (sense) strand, "rev" for scoring the reverse (anti-sense) strand, and "best" (default) to use the best score from both directions for each position.' ,
-                        choices = ['fwd','rev','best'] )
+parser = argparse.ArgumentParser(description = 'E2F Binding Model')
+parser.add_argument('-t', metavar = 'RunType',
+                    help = 'Type of run, either using PWM, or SVR for finding scores',
+                    dest = 'runtype' ,
+                    choices = ['SVR','PWM'] ,
+                    required=True)
+parser.add_argument('-g', metavar = 'GenomeFile',
+                    help = 'Genome File - Fasta format, containing the sequence for each chromosome as a separate entry',
+                    dest = 'genomefile')
+parser.add_argument('-s', metavar = 'SequenceFile',
+                    help = 'Sequence file where the first three columns are "Chromosome Name", "Start Position", and "Stop Position" (i.e. .bed format), and may or may not also have the sequences',
+                    dest = 'seqfile' ,
+                    required=True)
+parser.add_argument('-n', metavar = 'NegativeSequenceFile',
+                    help = "Sequence file for negative control sequences for ROC curves. If this flag is used, ROC data and AUC will be calculated. If this file contains more sequences than the input sequence file, it will be normalized. This file could be, for example, DNase hypersensitive sites that don't overlap the ChIP peaks given as the input sequence file" ,
+                    dest = 'negseqfile')
+parser.add_argument('-m', metavar = 'ModelFile',
+                    help = 'The E2F .model file generated from LibSVM, or the PWM model file (in probabilities or log ratios)' ,
+                    dest = 'modelfile' ,
+                    required=True)
+parser.add_argument('-o', metavar = 'OutFilePrefix',
+                    help = 'Optional, the prefix that all output files will be based on (do not include file extension)',
+                    dest = 'outprefix')
+parser.add_argument('--direction',
+                    help =  'Optional, specify the direction of the sequences to get scores for; "fwd" for scoring the forward (sense) strand, "rev" for scoring the reverse (anti-sense) strand, and "best" (default) to use the best score from both directions for each position.' ,
+                    choices = ['fwd','rev','best'] )
 
-    args = parser.parse_args()
-    genomefile = args.genomefile
-    seqfile = args.seqfile
-    modelfile = args.modelfile
-    runtype = args.runtype
-    if args.outprefix: outprefix = args.outprefix
-    else: outprefix = os.path.splitext(seqfile)[0] + '_' + modelfile + '_' + runtype + 'predict'
-    if args.negseqfile:
-        negseqfile = args.negseqfile
-        print "\nNegative sequence file has been specified, so ROC curve and AUC will be calculated."
-
-
-    #===============================================================================
+args = parser.parse_args()
+genomefile = args.genomefile
+seqfile = args.seqfile
+modelfile = args.modelfile
+runtype = args.runtype
+if args.outprefix: outprefix = args.outprefix
+else: outprefix = os.path.splitext(seqfile)[0] + '_' + modelfile + '_' + runtype + 'predict'
+if args.negseqfile:
+    negseqfile = args.negseqfile
+    print "\nNegative sequence file has been specified, so ROC curve and AUC will be calculated."
 
 
-    '''Preparation Stuff============================================================'''
+#===============================================================================
+
+
+'''Preparation Stuff============================================================'''
 
 
 
-    infofilename = outprefix + '_info.txt'
-    f_info = open(infofilename, 'a')
-    print "\nWriting info about this run to", infofilename
-    print >>f_info, '\n================================================================================\n' , \
-    '\nRun started at', time.strftime("%m\%d\%Y %H:%M") ,\
-    '\nRun type is', runtype ,\
-    '\nOutput files will be given the prefix:', outprefix,\
-    '\nSequence file being used:', seqfile,\
-    '\nModel file being used (SVR or PWM file):', modelfile
-    if args.genomefile:
-        print >>f_info, '\nGenome file (if needed)', genomefile
-    if args.negseqfile:
-        negseqfile = args.negseqfile
-        print >>f_info, '\nNegative sequence file for ROC:', negseqfile
+infofilename = outprefix + '_info.txt'
+f_info = open(infofilename, 'a')
+print "\nWriting info about this run to", infofilename
+print >>f_info, '\n================================================================================\n' , \
+'\nRun started at', time.strftime("%m\%d\%Y %H:%M") ,\
+'\nRun type is', runtype ,\
+'\nOutput files will be given the prefix:', outprefix,\
+'\nSequence file being used:', seqfile,\
+'\nModel file being used (SVR or PWM file):', modelfile
+if args.genomefile:
+    print >>f_info, '\nGenome file (if needed)', genomefile
+if args.negseqfile:
+    negseqfile = args.negseqfile
+    print >>f_info, '\nNegative sequence file for ROC:', negseqfile
 
 
-    ''' Parameters =========================================================='''
+''' Parameters =========================================================='''
 
-    ### These parameters are querried by the program
+### These parameters are querried by the program
 
-    ### Files with large numbers of sequences need to be broken up into chunks for LIBSVM to run efficently
-    chunksize = 1000
+### Files with large numbers of sequences need to be broken up into chunks for LIBSVM to run efficently
+chunksize = 1000
 
-    if runtype == 'SVR':
-        ### Length of the sequences used for building the model: 36 is the default value
-        length = 36
+if runtype == 'SVR':
+    ### Length of the sequences used for building the model: 36 is the default value
+    length = 36
 
-        ### Defining what kind of features we want. I.e. '1' for 1mers, or 123. Best value for E2Fs is '3'.
-        rawkmer = '3'
-        kmers = []
-        for item in str(rawkmer): kmers.append(int(item))
-        kinfo = ''
-        for x in kmers: kinfo = kinfo + str(x) + " + "
-        kinfo = kinfo[:-3] + " mer features"
+    ### Defining what kind of features we want. I.e. '1' for 1mers, or 123. Best value for E2Fs is '3'.
+    rawkmer = '3'
+    kmers = []
+    for item in str(rawkmer): kmers.append(int(item))
+    kinfo = ''
+    for x in kmers: kinfo = kinfo + str(x) + " + "
+    kinfo = kinfo[:-3] + " mer features"
 
-        ### Sequences that don't match the criteria (SVR) should be assigned a low score
-        badscore = 0
+    ### Sequences that don't match the criteria (SVR) should be assigned a low score
+    badscore = 0
 
-    ### Defining whether we're scoring the forward sequences ('fwd'), reverse ('rev'), or the best of both sequences ('best')
-    if args.direction: seqtype = args.direction
-    else: seqtype = 'best'
-
-    if runtype == 'SVR':
-        seqscorefile = binding_prediction_chipall(modelfile,seqfile,genomefile)
-        if args.negseqfile:
-            print "\nNormalizing the negative sequence file to the input sequence file..."
-            negseqfilenorm = normalize_peak_lengths(seqfile,negseqfile)[0]
-            print "\nRunning the model prediction on the negative sequence file..."
-            outprefix = outprefix + '_negseq'
-            negscorefile = binding_prediction_chipall(modelfile,negseqfilenorm,genomefile)
-            print "\nGetting the ROC curve"
-            SVR_ROC(modelfile,seqscorefile,negscorefile)
-
-    if runtype == 'PWM':
-        seqscorefile = binding_prediction_PWM_chipall(modelfile,seqfile,genomefile)
-        if args.negseqfile:
-            print "\nNormalizing the negative sequence file to the input sequence file..."
-            negseqfilenorm = normalize_peak_lengths(seqfile,negseqfile)[0]
-            print "\nRunning the model prediction on the negative sequence file..."
-            outprefix = outprefix + '_negseq'
-            negscorefile = binding_prediction_PWM_chipall(modelfile,negseqfilenorm,genomefile)
-            print "\nGetting the ROC curve"
-            PWM_ROC(modelfile,seqscorefile,negscorefile)
-
-    f_info.close()
+### Defining whether we're scoring the forward sequences ('fwd'), reverse ('rev'), or the best of both sequences ('best')
+if args.direction: seqtype = args.direction
+else: seqtype = 'best'
 
 
 '''Defining the Modules ========================================================='''
@@ -575,7 +548,7 @@ def apply_model_to_seqs(bigseqlist,model):
 
         ### Getting the predicted scores using the SVR model
         outfile = matrixfile[:-4]+'-prediction.txt'
-        print "svm-predict", matrixfile, model, outfile
+        print "svm-predict", matrixfile, modelfile, outfile
         args = ["svm-predict", matrixfile, model, outfile]
         #Popen(args, close_fds=True)
         output, error = Popen(args, stdout = PIPE, stderr = PIPE).communicate() #running the command, and storing the results
@@ -920,6 +893,59 @@ def AUC(data):
 
 '''Running the program ==========================================================='''
 
-if __name__ == '__main__':
-    main()
+# ### Finding the length of the sequence used for the model, and feature kmer (1mers, 2mers, 3mers, etc)
+# modeldata = read_data(modelfile)
+# featnum = float(len(modeldata[7][0].split(' '))-2)
+# seqlengths = []
+# for n in range(1,6): # for possible feature lengths (i.e. 1mers, 2mers, 3mers, etc)
+#     length = (featnum/4**n)+(n-1)
+#     if length <= 36 and length%2 == 0:
+#         seqlengths.append([int(length),n])
+# if len(seqlengths) == 1:
+#     print "Length of sequence is", seqlengths[0][0], ": features are kmers of length", seqlengths[0][1]
+#     length,k = seqlengths[0]
+# elif len(seqlengths) == 0:
+#     print "Sequence length and feature kmer length cannot be determined given a total of", featnum, "features. Check the libsvm model file for errors."
+# else:
+#     print "\nMultiple possibilities for sequence length exist. Choose the appropriate one."
+#     for j in range(len(seqlengths)):
+#         print "["+str(j+1)+"]",  "Length of sequence", seqlengths[j][0], ": feature kmers of length", seqlengths[j][1]
+#     while True:
+#         try:
+#             answer = int(raw_input("\nChoose the best option from above:\n"))
+#         except ValueError:
+#             print "Please enter an appropriate number"
+#             continue
+#         if answer > len(seqlengths) or answer <= 0:
+#             print "Please enter an appropriate number"
+#             continue
+#         else:
+#             break
+#     length,k = seqlengths[answer-1]
+# print "Length is ", length, ": k is", k
 
+if runtype == 'SVR':
+    seqscorefile = binding_prediction_chipall(modelfile,seqfile,genomefile)
+    if args.negseqfile:
+        print "\nNormalizing the negative sequence file to the input sequence file..."
+        negseqfilenorm = normalize_peak_lengths(seqfile,negseqfile)[0]
+        print "\nRunning the model prediction on the negative sequence file..."
+        outprefix = outprefix + '_negseq'
+        negscorefile = binding_prediction_chipall(modelfile,negseqfilenorm,genomefile)
+        print "\nGetting the ROC curve"
+        SVR_ROC(modelfile,seqscorefile,negscorefile)
+
+if runtype == 'PWM':
+    seqscorefile = binding_prediction_PWM_chipall(modelfile,seqfile,genomefile)
+    if args.negseqfile:
+        print "\nNormalizing the negative sequence file to the input sequence file..."
+        negseqfilenorm = normalize_peak_lengths(seqfile,negseqfile)[0]
+        print "\nRunning the model prediction on the negative sequence file..."
+        outprefix = outprefix + '_negseq'
+        negscorefile = binding_prediction_PWM_chipall(modelfile,negseqfilenorm,genomefile)
+        print "\nGetting the ROC curve"
+        PWM_ROC(modelfile,seqscorefile,negscorefile)
+
+
+
+f_info.close()
