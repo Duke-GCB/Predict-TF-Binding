@@ -60,13 +60,15 @@ def get_core(seq):
     return seq[16:20]
 
 
-kmers = [3]
-seqlist = ['GCCCGCAGAGCGGAAGGCGGGATGGCTGGGGGCGGG',
-           'GGGCTCAGCGCCGACTGCGCGCCTCTGCCCGCGAAA',
-           'CGCCATAGCGACGGCGCCGCAATTTAGGAGCGTGCT',
-           'TCCCGCCTTCCGCTCTGCGGGCGGCAGCCGGGCTGG']
+if __name__ == '__main__':
+    seqlist = ['GCCCGCAGAGCGGAAGGCGGGATGGCTGGGGGCGGG',
+               'GGGCTCAGCGCCGACTGCGCGCCTCTGCCCGCGAAA',
+               'CGCCATAGCGACGGCGCCGCAATTTAGGAGCGTGCT',
+               'TCCCGCCTTCCGCTCTGCGGGCGGCAGCCGGGCTGG']
 
-matrix = svr_matrix_from_seqlist(seqlist, [3])
-for seq in matrix:
-    for x in seq:
-        print x
+    matrix = svr_matrix_from_seqlist(seqlist, [3])
+    for seq in matrix:
+        for x in seq:
+            print x
+
+
