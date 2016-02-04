@@ -1,4 +1,5 @@
 import itertools
+import string
 
 NUCLEOTIDES='ACGT'
 
@@ -61,6 +62,17 @@ def write_svr_features(all_svr_features, matrixfile):
             # enumerate yields tuples with index (0, int) and the item (1, dict)
             colon_separated = map(lambda x:  '{}:{}'.format(x[0] + 2,x[1]['value']), enumerate(svr_features))
             print >> f, '\t'.join(colon_separated)
+
+
+def load_sequences(sequence_file):
+    '''
+    Loads sequences from a text file, one per line
+    :param sequence_file: a text file, with one sequence per line
+    :return: list of sequence strings
+    '''
+    with open(sequence_file,'r') as f:
+        sequences = map(string.strip, f)
+    return sequences
 
 
 if __name__ == '__main__':
