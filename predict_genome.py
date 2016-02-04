@@ -95,6 +95,30 @@ def predict(matrixfile, modelfile, outputfile):
         raise e
 
 
+def generate_matching_sequences(sequence, core, width):
+    """
+    Returns sub-sequences of width, that match the core in the middle.
+    :param sequence: The the sequence to search, such as the whole sequence for a chromosome
+    :param core: The bases for which to search, in the center
+    :param width: The desired sub-sequence width, e.g. 36
+    :return: Generator, returning one sub-sequence per call
+    """
+    # Slide a window of width over the big sequence, and if the core is in the middle, return it
+    # Subtract the window width to avoid indexing beyond the end of the sequence
+    sequence_width = len(sequence)
+    core_width = len(core)
+    max_start = sequence_width - width
+    # The core positions are calculated relative to the window (and not the overall sequence)
+    # This works as long as both core and width are same parity
+    core_start = (width - core_width) / 2
+    for start in range(max_start):
+        end = start + width
+        window_sequence = sequence[start:end]
+        window_core = window_sequence[core_start:core_start + core_width]
+        if window_core == core:
+            yield start, window_sequence
+
+
 if __name__ == '__main__':
     sequences = ['GCCCGCAGAGCGGAAGGCGGGATGGCTGGGGGCGGG',
                  'GGGCTCAGCGCCGACTGCGCGCCTCTGCCCGCGAAA',
