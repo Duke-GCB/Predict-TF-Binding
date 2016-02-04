@@ -1,6 +1,7 @@
 import itertools
 import string
 import subprocess
+from Bio import SeqIO
 
 NUCLEOTIDES='ACGT'
 
@@ -98,7 +99,8 @@ def predict(matrixfile, modelfile, outputfile):
 def generate_matching_sequences(sequence, core, width):
     """
     Returns sub-sequences of width, that match the core in the middle.
-    :param sequence: The the sequence to search, such as the whole sequence for a chromosome
+    :param sequence: The the sequence to search, such as the whole sequence for a chromosome.
+            Can be a string or a Bio.Seq
     :param core: The bases for which to search, in the center
     :param width: The desired sub-sequence width, e.g. 36
     :return: Generator, returning one sub-sequence per call
@@ -117,6 +119,19 @@ def generate_matching_sequences(sequence, core, width):
         window_core = window_sequence[core_start:core_start + core_width]
         if window_core == core:
             yield start, window_sequence
+
+def read_genome_sequence(fasta_file, chrom):
+    '''
+    Reads a fasta file containing sequences for each chromosome in the genome, and returns the sequence for chrom
+    :param fasta_file: File containing the genome sequences, such as hg19.fa
+    :param chrom: chromosome name
+    :return: The sequence, uppercased
+    '''
+
+    idx = SeqIO.index(fasta_file, 'fasta')
+    record = idx[chrom]
+    return record.seq.upper()
+
 
 
 if __name__ == '__main__':
