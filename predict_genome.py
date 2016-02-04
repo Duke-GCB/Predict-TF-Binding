@@ -66,25 +66,25 @@ def write_svr_features(all_svr_features, matrixfile):
 
 
 def load_sequences(sequence_file):
-    '''
+    """
     Loads sequences from a text file, one per line
     :param sequence_file: a text file, with one sequence per line
     :return: list of sequence strings
-    '''
+    """
     with open(sequence_file,'r') as f:
         sequences = map(string.strip, f)
     return sequences
 
 
 def predict(matrixfile, modelfile, outputfile):
-    '''
+    """
     Lowest-level prediction function. Runs on files
     Runs svm-predict with the matrixfile and modelfile, writing results to resultsfile
     :param matrixfile:  Name of matrix file in libsvm format
     :param modelfile:   Name of model file in libsvm format
     :param outputfile: Name of file to store output of svm-predict
     :return: None
-    '''
+    """
     args = ["svm-predict", matrixfile, modelfile, outputfile]
     try:
         output, error = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
