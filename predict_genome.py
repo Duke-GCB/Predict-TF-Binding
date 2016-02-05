@@ -1,5 +1,7 @@
 import itertools
 import string
+import os
+import sys
 from svmutil import *
 
 from Bio import SeqIO
@@ -127,7 +129,11 @@ def predict(features, model):
     for i, feature in enumerate(features):
         svm_matrix[i + 2] = feature['value']
     # svm_predict defines an info function that prints results to STDOUT
+    old_stdout = sys.stdout
+    devnull = open(os.devnull, 'w')
+    sys.stdout = devnull
     predictions = svm_predict([1], [svm_matrix], model)
+    sys.stdout = old_stdout
     return predictions
 
 
@@ -143,7 +149,6 @@ def predict_genome(genome_fasta_file, chrom, core, width, model_file, kmers):
     # Load model once
     model = load_model(model_file) # Will move this out of the loop
     for position, sequence in matching_sequences:
-        print "Translating {} at position {} to SVR by kmers {}".format(str(sequence), position, kmers)
         # 4. Translate the sequences into SVR matrix by kmers
         features = svr_features_from_sequence(sequence, kmers)
         predictions, accuracy, values = predict(features, model)
