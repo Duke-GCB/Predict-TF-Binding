@@ -1,6 +1,5 @@
 import itertools
 import string
-import subprocess
 from svmutil import *
 
 from Bio import SeqIO
@@ -79,25 +78,6 @@ def load_sequences(sequence_file):
     return sequences
 
 
-def predict(matrix_file, model_file, output_file):
-    """
-    Lowest-level prediction function. Runs on files
-    Runs svm-predict with the matrixfile and modelfile, writing results to resultsfile
-    :param matrix_file:  Name of matrix file in libsvm format
-    :param model_file:   Name of model file in libsvm format
-    :param output_file: Name of file to store output of svm-predict
-    :return: None
-    """
-    args = ["svm-predict", matrix_file, model_file, output_file]
-    try:
-        output, error = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-        if len(error) > 0:
-            raise Exception(error)
-    except Exception as e:
-        print "Error running svm-predict:", e
-        raise e
-
-
 def generate_matching_sequences(sequence, core, width):
     """
     Returns sub-sequences of width, that match the core in the middle.
@@ -139,6 +119,18 @@ def load_model(model_file):
     return svm_load_model(model_file)
 
 
+def predict(features, model):
+    svm_matrix = dict()
+    # Build the dictionary that corresponds to the matrix file
+    # Always has this 1:1 value at the beginning.
+    svm_matrix[1] = 1
+    for i, feature in enumerate(features):
+        svm_matrix[i + 2] = feature['value']
+    # svm_predict defines an info function that prints results to STDOUT
+    predictions = svm_predict([1], [svm_matrix], model)
+    return predictions
+
+
 def predict_genome(genome_fasta_file, chrom, core, width, model_file, kmers):
     # 1. load the genome
     print "Loading {} from {}".format(chrom, genome_fasta_file)
@@ -147,36 +139,15 @@ def predict_genome(genome_fasta_file, chrom, core, width, model_file, kmers):
     print "Generating matching sequences for core {}, width {}".format(core, width)
     matching_sequences = generate_matching_sequences(genome_sequence, core, width)
     # 3. Cores yield sequences
-    # Currently evaluating libsvm bindings vs calling subprocess, so limiting to the first match
+
+    # Load model once
+    model = load_model(model_file) # Will move this out of the loop
     for position, sequence in matching_sequences:
         print "Translating {} at position {} to SVR by kmers {}".format(str(sequence), position, kmers)
         # 4. Translate the sequences into SVR matrix by kmers
         features = svr_features_from_sequence(sequence, kmers)
-
-        run_subprocess = True
-        run_native = True
-
-        if run_subprocess:
-            matrixfile = 'matrix.txt'
-            output_file = 'output.txt'
-            print "writing features to matrixfile {}".format(matrixfile)
-            write_svr_features([features], matrixfile)
-            print "Predicting with results in {}".format(output_file)
-            predict(matrixfile, model_file, output_file)
-
-        if run_native:
-            native_features = dict()
-            # Build the dictionary that corresponds to the matrix file
-            # Always has this 1:1 value at the beginning.
-            native_features[1] = 1
-            for i, feature in enumerate(features):
-                native_features[i + 2] = feature['value']
-            model = load_model(model_file) # Will move this out of the loop
-            native_results = svm_predict([1], [native_features], model)
-            print native_results
-
-        break # Just do ONE.
-        # TODO: Parse the prediction results, and join with the sequences / indices
+        predictions, accuracy, values = predict(features, model)
+        print "{}:{}\t{}\t{}".format(chrom, position, sequence, predictions[0])
 
 
 if __name__ == '__main__':
