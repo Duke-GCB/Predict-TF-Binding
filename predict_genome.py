@@ -54,31 +54,6 @@ def svr_features_from_sequence(seq, kmers):
                 svr_features.append(info)
     return svr_features
 
-def write_svr_features(all_svr_features, matrixfile):
-    """
-    Writes a list of lists of feature dictionaries to a file
-    :param all_svr_features: A list of lists of svr_feature dictionaries. One entry in the master list per sequence
-    :param matrixfile: file name to write to
-    :return: None
-    """
-    with open(matrixfile, 'w') as f:
-        for svr_features in all_svr_features:
-            print >> f, "0\t1:1\t", # Required header for matrix file
-            # enumerate yields tuples with index (0, int) and the item (1, dict)
-            colon_separated = map(lambda x:  '{}:{}'.format(x[0] + 2,x[1]['value']), enumerate(svr_features))
-            print >> f, '\t'.join(colon_separated)
-
-
-def load_sequences(sequence_file):
-    """
-    Loads sequences from a text file, one per line
-    :param sequence_file: a text file, with one sequence per line
-    :return: list of sequence strings
-    """
-    with open(sequence_file,'r') as f:
-        sequences = map(string.strip, f)
-    return sequences
-
 
 def generate_matching_sequences(sequence, core, width):
     """
@@ -104,15 +79,22 @@ def generate_matching_sequences(sequence, core, width):
         if window_core == core:
             yield start, window_sequence
 
-def read_genome_sequence(fasta_file, chrom):
+def read_genome_idx(fasta_file):
     """
-    Reads a fasta file containing sequences for each chromosome in the genome, and returns the sequence for chrom
+    Reads a fasta-formatted genome and returns a Bio.SeqIO.index
     :param fasta_file: File containing the genome sequences, such as hg19.fa
+    :return: A Bio.SeqIO index
+    """
+    return SeqIO.index(fasta_file, 'fasta')
+
+
+def get_chrom_sequence(idx, chrom):
+    """
+    Gets the sequence for a chromosome
+    :param idx: The BioPython sequence, indexed by chrom
     :param chrom: chromosome name
     :return: The sequence, uppercased
     """
-
-    idx = SeqIO.index(fasta_file, 'fasta')
     record = idx[chrom]
     return record.seq.upper()
 
@@ -127,13 +109,13 @@ def load_model(model_file):
 
 
 def predict(features, model, const_intercept=False):
-    '''
+    """
     Run prediction using svm_predict.
     :param features: List of features, produced by svr_features_from_sequence
     :param model: A loaded svm model (from load_model)
     :param const_intercept: if true, add a 1:1 term at the beginning of the matrix. Must match model's term
     :return: triple of predictions, accuracy, and values from svm_predict.
-    '''
+    """
     svm_matrix = dict()
     # Build the dictionary that corresponds to the matrix file
     offset = 1 # svm_matrix is a dictionary of index to value, starting at 1
@@ -153,41 +135,64 @@ def predict(features, model, const_intercept=False):
     return predictions
 
 
-def predict_genome(genome_fasta_file, chrom, core, width, model_file, kmers, const_intercept, output_file):
+def print_bed(file_handle, chrom, position, width, score):
+    print >> file_handle, chrom, position, position + width, score
+
+def predict_genome(genome_fasta_file, core, width, model_file, kmers, const_intercept, output_file):
     """
-    Generate predictions for all bases on a single chromosome in the provided genome fasta file.
-     For a given core and width, this function generates predictions on the region 'width' with nucleotides
-     in 'core' matching in the center of the region.
+    Generate predictions on the provided genome fasta file.
+    Predictions will only be generated on sequences of width 'width', matching the nucleotides of 'core' in the center
 
     :param genome_fasta_file: File name of fasta-formatted genome, e.g. hg19.fa or hg38.fa
-    :param chrom: Name of a chromosome to predict for (e.g. chr16)
     :param core: sequence of nucleotides to find when generating predictions
     :param width: width, in bases, of the window on which to generate predictions
     :param model_file: Name of the svm model file to load
     :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
     :param const_intercept: true or false - whether or not to add a constant term to the matrix generation. Must match model generation
-    :param output_file: Output file to write, containing start position, sequence used for prediction, and score
+    :param output_file: Output file to write, in bed format
     :return: None
     """
     # 1. load the genome
-    print "Loading {} from {}".format(chrom, genome_fasta_file)
-    genome_sequence = read_genome_sequence(genome_fasta_file, chrom)
-    # 2. Find the cores
-    print "Generating matching sequences for core {}, width {}".format(core, width)
-    matching_sequences = generate_matching_sequences(genome_sequence, core, width)
-    # 3. Cores yield sequences
+    print "Loading genome {}".format(genome_fasta_file)
+    idx = read_genome_idx(genome_fasta_file)
 
-    # Load model once
+    # 2. Load model
+    print "Loading model {}".format(model_file)
     model = load_model(model_file) # Will move this out of the loop
 
-    # Open output file
+    # 3. Iterate over all chromosomes in genome
     with open(output_file, 'w') as output:
-        for position, sequence in matching_sequences:
-            # 4. Translate the sequences into SVR matrix by kmers
-            features = svr_features_from_sequence(sequence, kmers)
-            predictions, accuracy, values = predict(features, model, const_intercept)
-            print >> output, "{}:{}\t{}\t{}".format(chrom, position, sequence, predictions[0])
+        for chrom in idx:
+            print "Predicting on {}".format(chrom)
+            # Run prediction for the chrom
+            for position, sequence, score in predict_chrom(idx, chrom, core, width, model, kmers, const_intercept):
+                print_bed(sys.stdout, chrom, position, width, score)
+                print_bed(output, chrom, position, width, score)
+
+
+def predict_chrom(sequence_idx, chrom, core, width, model, kmers, const_intercept):
+    """
+    Generates predictions for a single chromosome
+    :param sequence_idx: The indexed SeqIO object
+    :param chrom: The name of a chromosome (must be the id in the index)
+    :param core: sequence of nucleotides to find when generating predictions
+    :param width: width, in bases, of the window on which to generate predictions
+    :param model_file: Name of the svm model file to load
+    :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
+    :param const_intercept: true or false - whether or not to add a constant term to the matrix generation. Must match model generation
+    :return: A generator, yielding the start position, sequence, and prediction score
+    """
+    chrom_sequence = get_chrom_sequence(sequence_idx, chrom)
+    print "Generating matching sequences for core {}, width {}".format(core, width)
+    matching_sequences = generate_matching_sequences(chrom_sequence, core, width)
+    # 3. Cores yield sequences
+
+    for position, sequence in matching_sequences:
+        # 4. Translate the sequences into SVR matrix by kmers
+        features = svr_features_from_sequence(sequence, kmers)
+        predictions, accuracy, values = predict(features, model, const_intercept)
+        yield position, sequence, predictions[0]
 
 
 if __name__ == '__main__':
-    predict_genome('hg19.fa', 'chr16', 'GGAA', 36, 'ELK1_100nM_Bound_filtered_normalized_GGAA_1a2a3mer_format.model', [1,2,3], True, 'output.txt')
+    predict_genome('hg19.fa', 'GGAA', 36, 'ELK1_100nM_Bound_filtered_normalized_GGAA_1a2a3mer_format.model', [1,2,3], True, 'output.txt')
