@@ -1,4 +1,5 @@
 import unittest
+import json
 
 from predict_genome import svr_features_from_sequence
 
@@ -29,6 +30,13 @@ class TestPredictGenome(unittest.TestCase):
         # Extract the original sequence, just the 1mers
         just_nucleotides = map(lambda x: x['feature'], just_matches[0:36])
         self.assertEqual(''.join(just_nucleotides), sequence, "Reconstructed sequence does not match")
+
+    def test_svr_features_from_sequence_1_2_3mer_exact(self):
+        sequence = 'CAGGCTTTGGGAGCCAGCGGGGCGGGAGCGGCGAAG'
+        features = svr_features_from_sequence(sequence, [1,2,3])
+        with open('test_matrix.json', 'r') as f:
+            expected = json.load(f)
+        self.assertEqual(features, expected, "Generated feature matrix does not match")
 
 
 if __name__ == '__main__':
