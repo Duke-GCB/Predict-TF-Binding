@@ -45,13 +45,12 @@ def svr_features_from_sequence(seq, kmers):
         n_sub_seqs = len(str_seq) - (k - 1) # If seq length is 36 and k is 3, there are 34 positions
         for position in range(n_sub_seqs):
             sub_seq = str_seq[position:position + k] # the sub-sequence with length k
-            for feature in features:
-                if feature == sub_seq:
-                    value = 1
-                else:
-                    value = 0
-                info = {'feature': feature, 'position': position, 'value' : value}
-                svr_features.append(info)
+            # start with a template list. All zero values at the current position
+            exploded = [{'feature': feature, 'position': position, 'value': 0} for feature in features]
+            # Determine the index of the current sub seq
+            feature_index = features.index(sub_seq)
+            exploded[feature_index]['value'] = 1
+            svr_features.extend(exploded)
     return svr_features
 
 
