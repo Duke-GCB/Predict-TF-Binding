@@ -48,8 +48,11 @@ def svr_features_from_sequence(seq, kmers):
             # start with a template list. All zero values at the current position
             exploded = [{'feature': feature, 'position': position, 'value': 0} for feature in features]
             # Determine the index of the current sub seq
-            feature_index = features.index(sub_seq)
-            exploded[feature_index]['value'] = 1
+            try:
+                feature_index = features.index(sub_seq)
+                exploded[feature_index]['value'] = 1
+            except ValueError:
+                print "Warning: sub-sequence '{}' not found in features".format(sub_seq)
             svr_features.extend(exploded)
     return svr_features
 
@@ -100,11 +103,14 @@ def get_chrom_sequence(idx, chrom):
 
 def load_model(model_file):
     """
-    Loads a svm model from a file
+    Loads a svm model from a file and computes its size
     :param model_file: The file name of the model to load
-    :return: the loaded svm model
+    :return: A dictionary with keys model, file, and size
     """
-    return svm_load_model(model_file)
+    model = svm_load_model(model_file)
+    size = len(model.get_SV()[0])
+    model_dict = {'model': model, 'size': size}
+    return model_dict
 
 
 def predict(features, model, const_intercept=False):
@@ -161,24 +167,24 @@ def predict_genome(genome_fasta_file, core, width, model_file, kmers, const_inte
     :return: None
     """
     # 1. load the genome
-    print "Loading genome {}".format(genome_fasta_file)
+    print 'Loading genome', genome_fasta_file
     idx = read_genome_idx(genome_fasta_file)
 
     # 2. Load model
-    print "Loading model {}".format(model_file)
-    model = load_model(model_file) # Will move this out of the loop
+    print 'Loading model', model_file
+    model_dict = load_model(model_file)
 
     # 3. Iterate over all chromosomes in genome
     with open(output_file, 'w') as output:
         for chrom in idx:
-            print "Predicting on {}".format(chrom)
+            print 'Predicting on', chrom
             # Run prediction for the chrom
-            for position, sequence, score in predict_chrom(idx, chrom, core, width, model, kmers, const_intercept):
+            for position, sequence, score in predict_chrom(idx, chrom, core, width, model_dict, kmers, const_intercept):
                 print_bed(sys.stdout, chrom, position, width, score)
                 print_bed(output, chrom, position, width, score)
 
 
-def predict_chrom(sequence_idx, chrom, core, width, model, kmers, const_intercept):
+def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_intercept):
     """
     Generates predictions for a single chromosome
     :param sequence_idx: The indexed SeqIO object
@@ -190,6 +196,7 @@ def predict_chrom(sequence_idx, chrom, core, width, model, kmers, const_intercep
     :param const_intercept: true or false - whether or not to add a constant term to the matrix generation. Must match model generation
     :return: A generator, yielding the start position, sequence, and prediction score
     """
+
     chrom_sequence = get_chrom_sequence(sequence_idx, chrom)
     print "Generating matching sequences for core {}, width {}".format(core, width)
     matching_sequences = generate_matching_sequences(chrom_sequence, core, width)
@@ -198,7 +205,11 @@ def predict_chrom(sequence_idx, chrom, core, width, model, kmers, const_intercep
     for position, sequence in matching_sequences:
         # 4. Translate the sequences into SVR matrix by kmers
         features = svr_features_from_sequence(sequence, kmers)
-        predictions, accuracy, values = predict(features, model, const_intercept)
+        feature_size = len(features)
+        if const_intercept: feature_size += 1 # If we are to use a const intercept term, we will have one more feature
+        if model_dict['size'] != feature_size:
+            raise Exception("Model size {} does not match feature size {}.\nPlease check paramaters for width, kmers, and const_intercept".format(model_size, feature_size))
+        predictions, accuracy, values = predict(features, model_dict['model'], const_intercept)
         yield position, sequence, predictions[0]
 
 
