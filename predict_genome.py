@@ -36,15 +36,15 @@ def svr_features_from_sequence(seq, kmers):
     :param kmers: list of integers (e.g. [1,2,3])
     :return: a list of dictionaries, containing position, featvalue, and feature
     """
-
+    str_seq = str(seq) # If seq is a Bio.Seq, it's faster to check it as a string
     svr_features = []
     for k in kmers:
         # Generate all possible combinations of length k (e.g ['AAA', 'AAC', ...  'TTG', 'TTT']
         features = [''.join(x) for x in itertools.product(NUCLEOTIDES, repeat=k)]
         # Check each position in the sequence for a match
-        n_sub_seqs = len(seq) - (k - 1) # If seq length is 36 and k is 3, there are 34 positions
+        n_sub_seqs = len(str_seq) - (k - 1) # If seq length is 36 and k is 3, there are 34 positions
         for position in range(n_sub_seqs):
-            sub_seq = seq[position:position + k] # the sub-sequence with length k
+            sub_seq = str_seq[position:position + k] # the sub-sequence with length k
             for feature in features:
                 if feature == sub_seq:
                     value = 1
