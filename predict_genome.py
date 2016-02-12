@@ -135,6 +135,15 @@ def predict(features, model, const_intercept=False):
 
 
 def print_bed(file_handle, chrom, position, width, score):
+    """
+    Prints an annotation in BED format (space-separated) to the provided file handle, could be sys.stdout or an open file
+    :param file_handle: destination file handle for line printing
+    :param chrom: Chromosome, e.g. 'chr16'
+    :param position: Integer position of the annotation
+    :param width: Integer width of the annotation
+    :param score: floating-point value of the annotation
+    :return: None
+    """
     print >> file_handle, chrom, position, position + width, score
 
 def predict_genome(genome_fasta_file, core, width, model_file, kmers, const_intercept, output_file):
