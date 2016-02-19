@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+import argparse
 import itertools
 import string
 import os
@@ -208,10 +211,49 @@ def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_int
         feature_size = len(features)
         if const_intercept: feature_size += 1 # If we are to use a const intercept term, we will have one more feature
         if model_dict['size'] != feature_size:
-            raise Exception("Model size {} does not match feature size {}.\nPlease check paramaters for width, kmers, and const_intercept".format(model_size, feature_size))
+            raise Exception("Model size {} does not match feature size {}.\nPlease check paramaters for width, kmers, "
+                            "and const_intercept".format(model_dict['size'], feature_size))
         predictions, accuracy, values = predict(features, model_dict['model'], const_intercept)
         yield position, sequence, predictions[0]
 
+def main():
+    parser = argparse.ArgumentParser(description = 'TF Predictions Generator')
+    parser.add_argument('-g', metavar='GenomeFile',
+                        help='Genome File in fasta format, containing sequence for each chrom as a separate entry',
+                        dest='genome_fasta_file',
+                        required=True)
+    parser.add_argument('-m', metavar='ModelFile',
+                        help='The .model file generated from LibSVM, matching the specified core and kmers' ,
+                        dest='model_file',
+                        required=True)
+    parser.add_argument('-c', metavar='Core',
+                        help='Sequence of nucleotides to search as center of predictions',
+                        dest='core',
+                        required=True)
+    parser.add_argument('-w', metavar='Width',
+                        type=int,
+                        help='Width, in bases, of the window on which to generate predictions',
+                        dest='width',
+                        required=True
+                        )
+    parser.add_argument('-k', metavar='Kmers',
+                        help='List of integers (e.g. 1,2,3) for combination of bases in prediction. Must match model',
+                        dest='kmers',
+                        type=int,
+                        nargs='+',
+                        required=True)
+    parser.add_argument('-i',
+                        action='store_true',
+                        help='Whether or not to include the constant term in matrix generation. Must match model',
+                        dest='const_intercept')
+    parser.add_argument('-o', metavar='OutputFile',
+                        help='Output file to write, in bed format',
+                        dest='output_file',
+                        required=True)
+    args = parser.parse_args()
+    const_intercept = args.const_intercept or False
+    predict_genome(args.genome_fasta_file, args.core, args.width, args.model_file, args.kmers, const_intercept, args.output_file)
+
 
 if __name__ == '__main__':
-    predict_genome('hg19.fa', 'GGAA', 36, 'ELK1_100nM_Bound_filtered_normalized_GGAA_1a2a3mer_format.model', [1,2,3], True, 'output.txt')
+    main()
