@@ -80,6 +80,9 @@ def generate_matching_sequences(sequence, core, width):
     for start in range(max_start):
         end = start + width
         window_sequence = sequence[start:end]
+        # If any of the bases in the window are unknown, we cannot predict on the sequence
+        if 'N' in window_sequence:
+            continue
         window_core = window_sequence[core_start:core_start + core_width]
         if window_core == core:
             yield start, window_sequence
