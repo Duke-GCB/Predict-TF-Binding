@@ -156,13 +156,14 @@ def print_bed(file_handle, chrom, position, width, score):
     print >> file_handle, chrom, position, position + width, score
 
 
-def predict_genome(genome_fasta_file, core, width, model_file, kmers, const_intercept, output_file):
+def predict_genome(genome_fasta_file, chroms, core, width, model_file, kmers, const_intercept, output_file):
     """
     Generate predictions on the provided genome fasta file.
     Predictions will only be generated on sequences of width 'width', matching the nucleotides of 'core' in the center
 
     :param genome_fasta_file: File name of fasta-formatted genome, e.g. hg19.fa or hg38.fa
     :param core: sequence of nucleotides to find when generating predictions
+    :param chroms: List of chromosome names in the genome on which to predict
     :param width: width, in bases, of the window on which to generate predictions
     :param model_file: Name of the svm model file to load
     :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
@@ -180,7 +181,7 @@ def predict_genome(genome_fasta_file, core, width, model_file, kmers, const_inte
 
     # 3. Iterate over all chromosomes in genome
     with open(output_file, 'w') as output:
-        for chrom in predictable_chroms():
+        for chrom in chroms:
             print 'Predicting on', chrom
             # Run prediction for the chrom
             for position, sequence, score in predict_chrom(idx, chrom, core, width, model_dict, kmers, const_intercept):
@@ -237,6 +238,10 @@ def main():
                         help='Genome File in fasta format, containing sequence for each chrom as a separate entry',
                         dest='genome_fasta_file',
                         required=True)
+    parser.add_argument('--chroms', metavar='Chroms',
+                        help='Optional List of chromosomes from the genome file to predict',
+                        dest='chroms',
+                        nargs='*')
     parser.add_argument('-m', metavar='ModelFile',
                         help='The .model file generated from LibSVM, matching the specified core and kmers' ,
                         dest='model_file',
@@ -267,7 +272,8 @@ def main():
                         required=True)
     args = parser.parse_args()
     const_intercept = args.const_intercept or False
-    predict_genome(args.genome_fasta_file, args.core, args.width, args.model_file, args.kmers, const_intercept, args.output_file)
+    chroms = args.chroms or predictable_chroms()
+    predict_genome(args.genome_fasta_file, chroms, args.core, args.width, args.model_file, args.kmers, const_intercept, args.output_file)
 
 
 if __name__ == '__main__':
