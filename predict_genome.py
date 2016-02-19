@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+import argparse
 import itertools
 import string
 import os
@@ -152,13 +155,15 @@ def print_bed(file_handle, chrom, position, width, score):
     """
     print >> file_handle, chrom, position, position + width, score
 
-def predict_genome(genome_fasta_file, core, width, model_file, kmers, const_intercept, output_file):
+
+def predict_genome(genome_fasta_file, chroms, core, width, model_file, kmers, const_intercept, output_file):
     """
     Generate predictions on the provided genome fasta file.
     Predictions will only be generated on sequences of width 'width', matching the nucleotides of 'core' in the center
 
     :param genome_fasta_file: File name of fasta-formatted genome, e.g. hg19.fa or hg38.fa
     :param core: sequence of nucleotides to find when generating predictions
+    :param chroms: List of chromosome names in the genome on which to predict
     :param width: width, in bases, of the window on which to generate predictions
     :param model_file: Name of the svm model file to load
     :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
@@ -176,7 +181,7 @@ def predict_genome(genome_fasta_file, core, width, model_file, kmers, const_inte
 
     # 3. Iterate over all chromosomes in genome
     with open(output_file, 'w') as output:
-        for chrom in idx:
+        for chrom in chroms:
             print 'Predicting on', chrom
             # Run prediction for the chrom
             for position, sequence, score in predict_chrom(idx, chrom, core, width, model_dict, kmers, const_intercept):
@@ -208,10 +213,68 @@ def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_int
         feature_size = len(features)
         if const_intercept: feature_size += 1 # If we are to use a const intercept term, we will have one more feature
         if model_dict['size'] != feature_size:
-            raise Exception("Model size {} does not match feature size {}.\nPlease check paramaters for width, kmers, and const_intercept".format(model_size, feature_size))
+            raise Exception("Model size {} does not match feature size {}.\nPlease check paramaters for width, kmers, "
+                            "and const_intercept".format(model_dict['size'], feature_size))
         predictions, accuracy, values = predict(features, model_dict['model'], const_intercept)
         yield position, sequence, predictions[0]
 
 
+def predictable_chroms():
+    """
+    Returns the list of chromosomes on which we can predict: chr1, chr2...chr22, chrX, chrY, chrM
+    :return: List of chromosome names
+    """
+    chroms = list()
+    for i in range(1,23):
+        chroms.append('chr' + str(i))
+    for i in ('X','Y','M'):
+        chroms.append('chr' + i)
+    return chroms
+
+
+def main():
+    parser = argparse.ArgumentParser(description = 'TF Predictions Generator')
+    parser.add_argument('-g', metavar='GenomeFile',
+                        help='Genome File in fasta format, containing sequence for each chrom as a separate entry',
+                        dest='genome_fasta_file',
+                        required=True)
+    parser.add_argument('--chroms', metavar='Chroms',
+                        help='Optional List of chromosomes from the genome file to predict',
+                        dest='chroms',
+                        nargs='*')
+    parser.add_argument('-m', metavar='ModelFile',
+                        help='The .model file generated from LibSVM, matching the specified core and kmers' ,
+                        dest='model_file',
+                        required=True)
+    parser.add_argument('-c', metavar='Core',
+                        help='Sequence of nucleotides to search as center of predictions',
+                        dest='core',
+                        required=True)
+    parser.add_argument('-w', metavar='Width',
+                        type=int,
+                        help='Width, in bases, of the window on which to generate predictions',
+                        dest='width',
+                        required=True
+                        )
+    parser.add_argument('-k', metavar='Kmers',
+                        help='List of integers (e.g. 1,2,3) for combination of bases in prediction. Must match model',
+                        dest='kmers',
+                        type=int,
+                        nargs='+',
+                        required=True)
+    parser.add_argument('-i',
+                        action='store_true',
+                        help='Whether or not to include the constant term in matrix generation. Must match model',
+                        dest='const_intercept')
+    parser.add_argument('-o', metavar='OutputFile',
+                        help='Output file to write, in bed format',
+                        dest='output_file',
+                        required=True)
+    args = parser.parse_args()
+    const_intercept = args.const_intercept or False
+    chroms = args.chroms or predictable_chroms()
+    predict_genome(args.genome_fasta_file, chroms, args.core, args.width, args.model_file, args.kmers, const_intercept, args.output_file)
+
+
 if __name__ == '__main__':
-    predict_genome('hg19.fa', 'GGAA', 36, 'ELK1_100nM_Bound_filtered_normalized_GGAA_1a2a3mer_format.model', [1,2,3], True, 'output.txt')
+    main()
