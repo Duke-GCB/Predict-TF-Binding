@@ -155,6 +155,7 @@ def print_bed(file_handle, chrom, position, width, score):
     """
     print >> file_handle, chrom, position, position + width, score
 
+
 def predict_genome(genome_fasta_file, core, width, model_file, kmers, const_intercept, output_file):
     """
     Generate predictions on the provided genome fasta file.
@@ -179,7 +180,7 @@ def predict_genome(genome_fasta_file, core, width, model_file, kmers, const_inte
 
     # 3. Iterate over all chromosomes in genome
     with open(output_file, 'w') as output:
-        for chrom in idx:
+        for chrom in predictable_chroms():
             print 'Predicting on', chrom
             # Run prediction for the chrom
             for position, sequence, score in predict_chrom(idx, chrom, core, width, model_dict, kmers, const_intercept):
@@ -215,6 +216,20 @@ def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_int
                             "and const_intercept".format(model_dict['size'], feature_size))
         predictions, accuracy, values = predict(features, model_dict['model'], const_intercept)
         yield position, sequence, predictions[0]
+
+
+def predictable_chroms():
+    """
+    Returns the list of chromosomes on which we can predict: chr1, chr2...chr22, chrX, chrY, chrM
+    :return: List of chromosome names
+    """
+    chroms = list()
+    for i in range(1,23):
+        chroms.append('chr' + str(i))
+    for i in ('X','Y','M'):
+        chroms.append('chr' + i)
+    return chroms
+
 
 def main():
     parser = argparse.ArgumentParser(description = 'TF Predictions Generator')
