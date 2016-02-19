@@ -1,7 +1,7 @@
 import unittest
 import json
 
-from predict_genome import svr_features_from_sequence
+from predict_genome import svr_features_from_sequence, generate_matching_sequences
 
 class TestPredictGenome(unittest.TestCase):
 
@@ -38,6 +38,26 @@ class TestPredictGenome(unittest.TestCase):
             expected = json.load(f)
         self.assertEqual(features, expected, "Generated feature matrix does not match")
 
+    def test_generates_matching_sequences(self):
+        sequence = 'ACCTTAGCCTTGATAT'
+        core = 'CCTT'
+        width=6
+        expected_matches = [(0,'ACCTTA'),(6,'GCCTTG')]
+        count=0
+        for match in generate_matching_sequences(sequence, core, width):
+            count+=1
+            self.assertIn(match, expected_matches, 'Mismatch : {} not in {}'.format(match, expected_matches))
+        self.assertEqual(count, len(expected_matches), 'Unexpected number of matches')
 
+    def test_skips_unknown_bases(self):
+        sequence = 'ACCTTAGCCTTNATAT'
+        core = 'CCTT'
+        width = 6
+        expected_matches = [(0,'ACCTTA')]
+        count = 0
+        for match in generate_matching_sequences(sequence, core, width):
+            count += 1
+            self.assertIn(match, expected_matches, 'Mismatch: {} not in P {}'.format(match, expected_matches))
+        self.assertEqual(count, len(expected_matches), 'Unexpected number of matches')
 if __name__ == '__main__':
     unittest.main()
