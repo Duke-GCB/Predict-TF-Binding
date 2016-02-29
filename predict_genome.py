@@ -2,7 +2,6 @@
 
 import argparse
 import itertools
-import string
 import os
 import sys
 from svmutil import *
