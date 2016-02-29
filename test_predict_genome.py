@@ -47,13 +47,13 @@ class TestPredictGenome(unittest.TestCase):
     def test_generates_matching_sequences(self):
         sequence = 'ACCTTAGCCTTGATAT'
         core = 'CCTT'
-        expected_matches = [(0,'ACCTTA'),(6,'GCCTTG')]
+        expected_matches = [(0,('ACCTTA',)),(6,('GCCTTG',))]
         self._check_generated_matches(sequence, core, 6, expected_matches)
 
     def test_skips_unknown_bases(self):
         sequence = 'ACCTTAGCCTTNATAT'
         core = 'CCTT'
-        expected_matches = [(0,'ACCTTA')]
+        expected_matches = [(0,('ACCTTA',))]
         self._check_generated_matches(sequence, core, 6, expected_matches)
 
     def load_model(self):
@@ -64,7 +64,7 @@ class TestPredictGenome(unittest.TestCase):
     def test_generates_matching_reverse_complements(self):
         core = 'GCTG' # must not be palindromic
         sequence = 'ATTCAGCGAA' # Reverse complement in the middle
-        expected_matches = [(2,'CGCTGA')]
+        expected_matches = [(2,('CGCTGA',))]
         self._check_generated_matches(sequence, core, 6, expected_matches)
 
     def test_generates_matching_palindromes(self):

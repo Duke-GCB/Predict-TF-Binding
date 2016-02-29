@@ -97,11 +97,11 @@ def generate_matching_sequences(sequence, core, width):
         window_core = window_sequence[core_start:core_start + core_width]
         # If core is palindromic, return two sequences and let the caller decide which to use
         if core == core_rc and window_core == core:
-            yield start, (str(window_sequence), str(window_sequence.reverse_complement()))
+            yield start, (str(window_sequence), str(window_sequence.reverse_complement()),)
         elif window_core == core:
-            yield start, (window_sequence)
+            yield start, (window_sequence,)
         elif window_core == core_rc:
-            yield start, (str(window_sequence.reverse_complement()))
+            yield start, (str(window_sequence.reverse_complement()),)
 
 def read_genome_idx(fasta_file):
     """
@@ -233,6 +233,7 @@ def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_int
         best_prediction = 0.0
         best_sequence = None
         for sequence in sequences:
+            print 'predicting sequence {} with length {}'.format(sequence, len(sequence))
             features = svr_features_from_sequence(sequence, kmers)
             feature_size = len(features)
             if const_intercept: feature_size += 1 # If we are to use a const intercept term, we will have one more feature
