@@ -230,7 +230,7 @@ def predictable_chroms():
     chroms = list()
     for i in range(1,23):
         chroms.append('chr' + str(i))
-    for i in ('X','Y','M'):
+    for i in ('X','Y'):
         chroms.append('chr' + i)
     return chroms
 
