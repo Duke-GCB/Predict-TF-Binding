@@ -7,7 +7,7 @@ import os
 import sys
 from svmutil import *
 
-from Bio import SeqIO
+from Bio import SeqIO, Seq
 
 NUCLEOTIDES='ACGT'
 
@@ -71,8 +71,19 @@ def generate_matching_sequences(sequence, core, width):
     """
     # Slide a window of width over the big sequence, and if the core is in the middle, return it
     # Subtract the window width to avoid indexing beyond the end of the sequence
+
+    # If sequence and core are strings, build BioPython sequences out of them
+    # so they can be reverse-complemented
+    if isinstance(core, str):
+        core = Seq.Seq(core)
+    if isinstance(sequence, str):
+        sequence = Seq.Seq(sequence)
     sequence_width = len(sequence)
     core_width = len(core)
+    # Need to search for core and reverse complement in the window region
+    # If RC is found in the region, return the reverse-complement of the window instead
+    # Also, if core is palindromic, need to return both regions and return best score
+    core_rc = core.reverse_complement()
     max_start = sequence_width - width
     # The core positions are calculated relative to the window (and not the overall sequence)
     # This works as long as both core and width are same parity
@@ -84,8 +95,13 @@ def generate_matching_sequences(sequence, core, width):
         if 'N' in window_sequence:
             continue
         window_core = window_sequence[core_start:core_start + core_width]
-        if window_core == core:
-            yield start, window_sequence
+        # If core is palindromic, return two sequences and let the caller decide which to use
+        if core == core_rc and window_core == core:
+            yield start, (str(window_sequence), str(window_sequence.reverse_complement()))
+        elif window_core == core:
+            yield start, (window_sequence)
+        elif window_core == core_rc:
+            yield start, (str(window_sequence.reverse_complement()))
 
 def read_genome_idx(fasta_file):
     """
@@ -207,19 +223,27 @@ def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_int
 
     chrom_sequence = get_chrom_sequence(sequence_idx, chrom)
     print "Generating matching sequences for core {}, width {}".format(core, width)
-    matching_sequences = generate_matching_sequences(chrom_sequence, core, width)
     # 3. Cores yield sequences
 
-    for position, sequence in matching_sequences:
+    for position, sequences in generate_matching_sequences(chrom_sequence, core, width):
+        # generator returns a position, and a tuple of 1 or 2 sequences
+        # If two sequences are returned, core is palindromic and can bind on either strand
+        # So generate predictions for both and return the best
         # 4. Translate the sequences into SVR matrix by kmers
-        features = svr_features_from_sequence(sequence, kmers)
-        feature_size = len(features)
-        if const_intercept: feature_size += 1 # If we are to use a const intercept term, we will have one more feature
-        if model_dict['size'] != feature_size:
-            raise Exception("Model size {} does not match feature size {}.\nPlease check paramaters for width, kmers, "
-                            "and const_intercept".format(model_dict['size'], feature_size))
-        predictions, accuracy, values = predict(features, model_dict['model'], const_intercept)
-        yield position, sequence, predictions[0]
+        best_prediction = 0.0
+        best_sequence = None
+        for sequence in sequences:
+            features = svr_features_from_sequence(sequence, kmers)
+            feature_size = len(features)
+            if const_intercept: feature_size += 1 # If we are to use a const intercept term, we will have one more feature
+            if model_dict['size'] != feature_size:
+                raise Exception("Model size {} does not match feature size {}.\nPlease check paramaters for width, kmers, "
+                                "and const_intercept".format(model_dict['size'], feature_size))
+            predictions, accuracy, values = predict(features, model_dict['model'], const_intercept)
+            if predictions[0] > best_prediction:
+                best_prediction = predictions[0]
+                best_sequence = sequence
+        yield position, best_sequence, best_prediction
 
 
 def predictable_chroms():
