@@ -129,7 +129,7 @@ def load_model(model_file):
     :return: A dictionary with keys model, file, and size
     """
     model = svm_load_model(model_file)
-    size = len(model.get_SV()[0])
+    size = len(model.get_SV()[0]) - 1 # sv includes a -1 term that is not present in the model file, so subtract 1
     model_dict = {'model': model, 'size': size}
     return model_dict
 
