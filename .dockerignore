@@ -1,2 +1,4 @@
 *.model
 E2F1*.txt
+run-docker.sh
+predict_genome_docker.sh
