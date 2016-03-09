@@ -203,8 +203,8 @@ def predict_genome(genome_fasta_file, chroms, core, width, model_file, kmers, co
             print 'Predicting on', chrom
             # Run prediction for the chrom
             for position, sequence, score in predict_chrom(idx, chrom, core, width, model_dict, kmers, const_intercept):
-                print_bed(sys.stdout, chrom, position, width, score)
                 print_bed(output, chrom, position, width, score)
+    print 'Done'
 
 
 def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_intercept):
@@ -232,7 +232,6 @@ def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_int
         best_prediction = 0.0
         best_sequence = None
         for sequence in sequences:
-            print 'predicting sequence {} with length {}'.format(sequence, len(sequence))
             features = svr_features_from_sequence(sequence, kmers)
             feature_size = len(features)
             if const_intercept: feature_size += 1 # If we are to use a const intercept term, we will have one more feature
