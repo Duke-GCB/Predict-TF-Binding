@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# combine_predictions.py
+# combine_predictions_sql.py
 # Combines several prediction BED files into a single BED file
 #
 # When generating predictions from multiple cores, you'll have multiple prediction files that should be combined
@@ -16,13 +16,13 @@ def read_bed_file(bed_file):
 def combine_predictions(bed_files):
     # Load all bed files into a database
     conn = sqlite3.connect(':memory:')
+    conn.isolation_level = None # autocommit
     conn.execute('''CREATE TABLE scores (chrom text, start int, end int, score real)''')
     for i, bed_file in enumerate(bed_files):
         for chrom, start, end, score in read_bed_file(bed_file):
             start, end, score = int(start), int(end), float(score)
             stmt = 'INSERT INTO scores VALUES (\'{}\',{},{},{})'.format(chrom, start, end, score)
             conn.execute(stmt)
-        conn.commit()
     # Now use SQL to get the maximum score
 
     query = '''
