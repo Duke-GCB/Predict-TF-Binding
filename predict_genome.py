@@ -5,6 +5,7 @@ import itertools
 import os
 import sys
 from svmutil import *
+from math import exp
 
 from Bio import SeqIO, Seq
 
@@ -174,7 +175,7 @@ def print_bed(file_handle, chrom, position, width, score):
     print >> file_handle, chrom, position, position + width, score
 
 
-def predict_genome(genome_fasta_file, chroms, core, width, model_file, kmers, const_intercept, output_file):
+def predict_genome(genome_fasta_file, chroms, core, width, model_file, kmers, const_intercept, transform_scores, output_file):
     """
     Generate predictions on the provided genome fasta file.
     Predictions will only be generated on sequences of width 'width', matching the nucleotides of 'core' in the center
@@ -186,6 +187,7 @@ def predict_genome(genome_fasta_file, chroms, core, width, model_file, kmers, co
     :param model_file: Name of the svm model file to load
     :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
     :param const_intercept: true or false - whether or not to add a constant term to the matrix generation. Must match model generation
+    :param transform_scores: true or false - whether or not to transform the scores using the transform_score function
     :param output_file: Output file to write, in bed format
     :return: None
     """
@@ -202,12 +204,12 @@ def predict_genome(genome_fasta_file, chroms, core, width, model_file, kmers, co
         for chrom in chroms:
             print 'Predicting on', chrom
             # Run prediction for the chrom
-            for position, sequence, score in predict_chrom(idx, chrom, core, width, model_dict, kmers, const_intercept):
+            for position, sequence, score in predict_chrom(idx, chrom, core, width, model_dict, kmers, const_intercept, transform_scores):
                 print_bed(output, chrom, position, width, score)
     print 'Done'
 
 
-def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_intercept):
+def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_intercept, transform_scores):
     """
     Generates predictions for a single chromosome
     :param sequence_idx: The indexed SeqIO object
@@ -217,6 +219,7 @@ def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_int
     :param model_file: Name of the svm model file to load
     :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
     :param const_intercept: true or false - whether or not to add a constant term to the matrix generation. Must match model generation
+    :param transform_scores: true or false - whether or not to transform the scores using the transform_score function
     :return: A generator, yielding the start position, sequence, and prediction score
     """
 
@@ -242,6 +245,8 @@ def predict_chrom(sequence_idx, chrom, core, width, model_dict, kmers, const_int
             if predictions[0] > best_prediction:
                 best_prediction = predictions[0]
                 best_sequence = sequence
+        if transform_scores:
+            best_prediction = transform_score(best_prediction)
         yield position, best_sequence, best_prediction
 
 
@@ -257,6 +262,10 @@ def predictable_chroms():
         chroms.append('chr' + i)
     return chroms
 
+
+def transform_score(score):
+    # f(x) = 1 / ( 1 + exp(-x) )  to obtain only values between 0 and 1.
+    return 1.0 / (1.0 + exp(0.0 - score))
 
 def main():
     parser = argparse.ArgumentParser(description = 'TF Predictions Generator')
@@ -292,6 +301,10 @@ def main():
                         action='store_true',
                         help='Whether or not to include the constant term in matrix generation. Must match model',
                         dest='const_intercept')
+    parser.add_argument('-t',
+                        action='store_true',
+                        help='Transforms predictions with logistic function f(x) = 1 / ( 1 + exp(-x) )',
+                        dest='transform_scores')
     parser.add_argument('-o', metavar='OutputFile',
                         help='Output file to write, in bed format',
                         dest='output_file',
@@ -299,7 +312,8 @@ def main():
     args = parser.parse_args()
     const_intercept = args.const_intercept or False
     chroms = args.chroms or predictable_chroms()
-    predict_genome(args.genome_fasta_file, chroms, args.core, args.width, args.model_file, args.kmers, const_intercept, args.output_file)
+    predict_genome(args.genome_fasta_file, chroms, args.core, args.width, args.model_file, args.kmers, const_intercept,
+                   args.transform_scores, args.output_file)
 
 
 if __name__ == '__main__':
