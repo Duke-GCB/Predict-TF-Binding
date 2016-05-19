@@ -2,8 +2,6 @@
 
 import argparse
 import itertools
-import os
-import sys
 from svmutil import *
 from math import exp
 
@@ -151,14 +149,7 @@ def predict(features, model, const_intercept=False):
         offset += 1
     for i, feature in enumerate(features):
         svm_matrix[i + offset] = feature['value']
-    # svm_predict defines an info function that prints results to STDOUT
-    # So we suppress this by temporarily assigning sys.stdout to os.devnull
-    old_stdout = sys.stdout
-    devnull = open(os.devnull, 'w')
-    sys.stdout = devnull
-    predictions = svm_predict([1], [svm_matrix], model)
-    # Restore sys.stdout
-    sys.stdout = old_stdout
+    predictions = svm_predict([1.0], [svm_matrix], model, '-q')
     return predictions
 
 
