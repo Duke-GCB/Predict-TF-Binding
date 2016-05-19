@@ -200,7 +200,7 @@ def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, co
 
     # If no sequences are named, use all in the index
     if sequence_names is None:
-        sequence_names = idx.keys()
+        sequence_names = sorted(idx.keys())
 
     # Iterate over sequence
     with open(output_file, 'w') as output:
