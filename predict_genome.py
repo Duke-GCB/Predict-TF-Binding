@@ -224,19 +224,21 @@ def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers
         # If two sequences are returned, core is palindromic and can bind on either strand
         # So generate predictions for both and return the best
         # 4. Translate the sequences into SVR matrix by kmers
-        best_prediction = 0.0
+        best_prediction = None
         best_match = None
         for matching_sequence in matching_sequences:
             features = svr_features_from_sequence(matching_sequence, kmers)
             feature_size = len(features)
             if const_intercept: feature_size += 1 # If we are to use a const intercept term, we will have one more feature
             if model_dict['size'] != feature_size:
-                raise Exception("Model size {} does not match feature size {}.\nPlease check paramaters for width, kmers, "
-                                "and const_intercept".format(model_dict['size'], feature_size))
+                raise Exception('Model size {} does not match feature size {}.\nPlease check parameters for width, '
+                                'kmers, and const_intercept'.format(model_dict['size'], feature_size))
             predictions, accuracy, values = predict(features, model_dict['model'], const_intercept)
-            if predictions[0] > best_prediction:
+            if best_prediction is None or predictions[0] > best_prediction:
                 best_prediction = predictions[0]
                 best_match = matching_sequence
+        if best_prediction is None:
+            continue
         if transform_scores:
             best_prediction = transform_score(best_prediction)
         yield position, best_match, best_prediction
