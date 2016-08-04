@@ -103,8 +103,8 @@ def generate_matching_sequences(sequence, core, width):
 
 def read_fasta_idx(fasta_file):
     """
-    Reads a fasta-formatted genome and returns a Bio.SeqIO.index
-    :param fasta_file: File containing the genome sequences, such as hg19.fa
+    Reads a fasta-formatted sequence file and returns a Bio.SeqIO.index
+    :param fasta_file: File containing the sequences, such as hg19.fa
     :return: A Bio.SeqIO index
     """
     return SeqIO.index(fasta_file, 'fasta')
@@ -168,7 +168,7 @@ def print_bed(file_handle, chrom, position, width, score):
 
 def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, const_intercept, transform_scores, output_file):
     """
-    Generate predictions on the provided genome fasta file.
+    Generate predictions on the provided fasta file.
     Predictions will only be generated on sequences of width 'width', matching the nucleotides of 'core' in the center
 
     :param fasta_file: File name containing sequences, user-generated or a whole genome

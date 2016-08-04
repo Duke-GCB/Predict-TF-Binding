@@ -1,7 +1,7 @@
 import unittest
 import json
 
-from predict_genome import svr_features_from_sequence, generate_matching_sequences, predict, load_model
+from predict_tf_binding import svr_features_from_sequence, generate_matching_sequences, predict, load_model
 
 class TestPredictGenome(unittest.TestCase):
 

@@ -1,7 +1,7 @@
-SVR_models
-==========
+Predict-TF-Binding
+==================
 
-Python scripts for training and predicting TF-DNA binding using libsvm
+Python scripts for modeling and predicting TF-DNA binding using libsvm.
 
 ## Dependencies
 
@@ -12,7 +12,7 @@ Python scripts for training and predicting TF-DNA binding using libsvm
 
 To train a model (producing a `.model` file), use the **SVR_model_maker.py** script. See [SVR_modelmaker_README.md](./SVR_modelmaker_README.md) for details
 
-`python SVR_model_maker.py -i scores.txt -c 1 -p 0.1 --searchstrings GCGG`
+`./SVR_model_maker.py -i scores.txt -c 1 -p 0.1 --searchstrings GCGG`
 
 Where `scores.txt` is a tab-delimited file containing sequences and scores in the following format:
 
@@ -26,9 +26,9 @@ Bound2	00004	TGTCCCTGCGTGCAGAGCGCGGTGAGAGTGGGTGGA	7.39775421771	7.79538055766	7.
 
 ## Generating predictions
 
-Predictions can be generated from a model using the `predict_genome.py` script:
+Predictions can be generated on a FASTA sequence from a model file using the `predict_tf_binding.py` script:
 
-`python predict_genome.py -g hg19.fa -m E2F1_SVR.model -c GCGG -w 36 -k 1 2 3 -o E2F1-GCGG.txt`
+    ./predict_tf_binding.py -g hg19.fa -m E2F1_SVR.model -c GCGG -w 36 -k 1 2 3 -o E2F1-GCGG.txt`
 
-Predictions are generated in BED format, and may be processed from there. For full usage, see `predict_genome.py -h`
+Predictions are generated in BED format, and may be processed from there. For full usage, see `predict_tf_binding.py -h`
 
