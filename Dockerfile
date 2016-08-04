@@ -18,8 +18,8 @@ RUN useradd -m svr
 USER svr
 
 ENV PATH $PATH:/opt/libsvm-${LIBSVM_VER}
-ADD . /SVR_models
-WORKDIR /SVR_models
+ADD . /opt/predict-tf-binding
+WORKDIR /opt/predict-tf-binding
 
 # Include libsvm python bindings in PYTHONPATH
 # These have no installer, so it's simplest to just update PYTHONPATH
@@ -31,3 +31,4 @@ RUN pip install -r requirements.txt
 
 # switch back to svr
 USER svr
+ENV PATH /opt/predict-tf-binding:$PATH
