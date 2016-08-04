@@ -18,7 +18,7 @@ RUN useradd -m svr
 USER svr
 
 ENV PATH $PATH:/opt/libsvm-${LIBSVM_VER}
-ADD . /opt/predict-tf-binding
+ADD requirements.txt /opt/predict-tf-binding/requirements.txt
 WORKDIR /opt/predict-tf-binding
 
 # Include libsvm python bindings in PYTHONPATH
@@ -31,4 +31,6 @@ RUN pip install -r requirements.txt
 
 # switch back to svr
 USER svr
+ADD . /opt/predict-tf-binding/
 ENV PATH /opt/predict-tf-binding:$PATH
+CMD predict_tf_binding.py
