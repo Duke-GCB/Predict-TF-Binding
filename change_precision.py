@@ -1,38 +1,36 @@
 #!/usr/bin/env python
 
+import sys
 import argparse
 import csv
-import sys
 
 
-def filter_scores(input, output, delimiter, threshhold=0.0, source_index=3):
+def change_precision(input, output, precision, delimiter, source_index=3):
     """
-    Filters a predictions bed file by returning only rows where the score is
-    above the threshold
+    Changes the precision of the value at source_index to precision
+    value of one column by a factor
     :param input: An input stream or open file
     :param output: An output stream
-    :param delimiter: input and output file delimiter
-    :param threshhold: minimum value for inclusion
+    :param precision: Number of decimal places to use
+    :param delimiter: Separator for the file, e.g. tab, space, or comma.
     :param source_index: Column index containing the source value
-    :return:
+    :return: None
     """
     reader = csv.reader(input, delimiter=delimiter)
     writer = csv.writer(output, delimiter=delimiter)
     for row in reader:
-        # Adds a score column by multiplying the value of an existing column by a factor
-        # http://genome.ucsc.edu/FAQ/FAQformat.html#format1
-        if float(row[source_index]) > threshhold:
-            writer.writerow(row)
-
+        orig_prediction = float(row[source_index])
+        row[source_index] = '{:.{prec}f}'.format(orig_prediction, prec=precision)
+        writer.writerow(row)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description = 'Change precision of a float column in a BED file')
     parser.add_argument('inputfile', type=argparse.FileType('rb'))
-    parser.add_argument('threshhold', type=float, default=0.0)
+    parser.add_argument('precision', type=int)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--spaces', action='store_const', const=b' ', dest='delimiter')
     group.add_argument('--tabs', action='store_const', const=b'\t', dest='delimiter')
     group.add_argument('--commas', action='store_const', const=b',', dest='delimiter')
     parser.add_argument_group()
     args = parser.parse_args()
-    filter_scores(args.inputfile, sys.stdout, args.delimiter, args.threshhold)
+    change_precision(args.inputfile, sys.stdout, args.precision, args.delimiter)
