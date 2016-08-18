@@ -4,10 +4,21 @@ import argparse
 import itertools
 from svmutil import *
 from math import exp
+import time
 
 from Bio import SeqIO, Seq
 
 NUCLEOTIDES='ACGT'
+
+def timing(f):
+    def wrap(*args):
+        time1 = time.time()
+        ret = f(*args)
+        time2 = time.time()
+        print '%s function took %0.3f ms' % (f.func_name, (time2-time1)*1000.0)
+        return ret
+    return wrap
+
 
 def svr_features_from_sequence(seq, kmers):
     """
@@ -101,6 +112,7 @@ def generate_matching_sequences(sequence, core, width):
         elif window_core == core_rc:
             yield start, (str(window_sequence.reverse_complement()),)
 
+@timing
 def read_fasta_idx(fasta_file):
     """
     Reads a fasta-formatted sequence file and returns a Bio.SeqIO.index
@@ -110,6 +122,7 @@ def read_fasta_idx(fasta_file):
     return SeqIO.index(fasta_file, 'fasta')
 
 
+@timing
 def get_sequence_named(idx, name):
     """
     Gets the sequence for a name
@@ -120,7 +133,7 @@ def get_sequence_named(idx, name):
     record = idx[name]
     return record.seq.upper()
 
-
+@timing
 def load_model(model_file):
     """
     Loads a svm model from a file and computes its size
@@ -132,7 +145,7 @@ def load_model(model_file):
     model_dict = {'model': model, 'size': size}
     return model_dict
 
-
+@timing
 def predict(features, model, const_intercept=False):
     """
     Run prediction using svm_predict.
@@ -186,6 +199,7 @@ def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, co
     print 'Loading model', model_file
     model_dict = load_model(model_file)
 
+
     print 'Loading fasta', fasta_file
     idx = read_fasta_idx(fasta_file)
 
@@ -195,13 +209,16 @@ def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, co
 
     # Iterate over sequence
     with open(output_file, 'w') as output:
+        time1 = time.time()
         for sequence_name in sequence_names:
             print 'Predicting on', sequence_name
             for position, sequence, score in predict_sequence(idx, sequence_name, core, width, model_dict, kmers, const_intercept, transform_scores):
                 print_bed(output, sequence_name, position, width, score)
+        time2 = time.time()
+    print 'Predicting and writing to file function took %0.3f ms' % ( (time2-time1)*1000.0, )
     print 'Done'
 
-
+@timing
 def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers, const_intercept, transform_scores):
     """
     Generates predictions for a single sequence
