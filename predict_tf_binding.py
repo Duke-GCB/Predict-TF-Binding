@@ -121,15 +121,16 @@ def get_sequence_named(idx, name):
     return record.seq.upper()
 
 
-def load_model(model_file):
+def load_model(model_file, check_size=True):
     """
     Loads a svm model from a file and computes its size
     :param model_file: The file name of the model to load
     :return: A dictionary with keys model, file, and size
     """
     model = svm_load_model(model_file)
-    size = len(model.get_SV()[0]) - 1 # sv includes a -1 term that is not present in the model file, so subtract 1
-    model_dict = {'model': model, 'size': size}
+    model_dict = {'model': model}
+    if check_size:
+        model_dict['size'] = len(model.get_SV()[0]) - 1 # sv includes a -1 term that is not present in the model file, so subtract 1
     return model_dict
 
 
@@ -166,7 +167,7 @@ def print_bed(file_handle, chrom, position, width, score):
     print >> file_handle, chrom, position, position + width, score
 
 
-def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, const_intercept, transform_scores, output_file):
+def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, const_intercept, check_size, transform_scores, output_file):
     """
     Generate predictions on the provided fasta file.
     Predictions will only be generated on sequences of width 'width', matching the nucleotides of 'core' in the center
@@ -178,13 +179,14 @@ def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, co
     :param model_file: Name of the svm model file to load
     :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
     :param const_intercept: true or false - whether or not to add a constant term to the matrix generation. Must match model generation
+    :param check_size: true or false - if true, check the model's size against the expected size given kmers/const_intercept/width
     :param transform_scores: true or false - whether or not to transform the scores using the transform_score function
     :param output_file: Output file to write, in bed format
     :return: None
     """
 
     print 'Loading model', model_file
-    model_dict = load_model(model_file)
+    model_dict = load_model(model_file, check_size)
 
     print 'Loading fasta', fasta_file
     idx = read_fasta_idx(fasta_file)
@@ -209,7 +211,7 @@ def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers
     :param sequence_name: The name of a sequence (must be the id in the index)
     :param core: sequence of nucleotides to find when generating predictions
     :param width: width, in bases, of the window on which to generate predictions
-    :param model_dict: Dictionary containing a loaded svm model at 'model' and its size at 'size'
+    :param model_dict: Dictionary containing a loaded svm model at 'model' and optionally it's size at 'size'
     :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
     :param const_intercept: true or false - whether or not to add a constant term to the matrix generation. Must match model generation
     :param transform_scores: true or false - whether or not to transform the scores using the transform_score function
@@ -230,7 +232,7 @@ def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers
             features = svr_features_from_sequence(matching_sequence, kmers)
             feature_size = len(features)
             if const_intercept: feature_size += 1 # If we are to use a const intercept term, we will have one more feature
-            if model_dict['size'] != feature_size:
+            if 'size' in model_dict and model_dict['size'] != feature_size:
                 raise Exception('Model size {} does not match feature size {}.\nPlease check parameters for width, '
                                 'kmers, and const_intercept'.format(model_dict['size'], feature_size))
             predictions, accuracy, values = predict(features, model_dict['model'], const_intercept)
@@ -298,6 +300,11 @@ def main():
                         action='store_true',
                         help='Whether or not to include the constant term in matrix generation. Must match model',
                         dest='const_intercept')
+    parser.add_argument('--skip-size-check',
+                        action='store_true',
+                        help='Skip checking model size against kmers/width/const_interceipt. Size checking ensures model and parameters are recommended, but takes a few seconds on startup.',
+                        dest='skip_size_check',
+                        default=False)
     parser.add_argument('-t',
                         action='store_true',
                         help='Transforms predictions with logistic function f(x) = 1 / ( 1 + exp(-x) )',
@@ -308,6 +315,7 @@ def main():
                         required=True)
     args = parser.parse_args()
     const_intercept = args.const_intercept or False
+    check_size = not args.skip_size_check
 
     # Sequence and Genome are mutually exclusive
     # But selecting a genome should restrict to subset of predictable chroms
@@ -318,7 +326,7 @@ def main():
         fasta_file = args.sequence_fasta_file
         sequence_names = args.sequence_names
     predict_fasta(fasta_file, sequence_names, args.core, args.width, args.model_file, args.kmers, const_intercept,
-                  args.transform_scores, args.output_file)
+                  check_size, args.transform_scores, args.output_file)
 
 
 if __name__ == '__main__':
