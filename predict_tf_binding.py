@@ -58,7 +58,7 @@ def svr_features_from_sequence(seq, kmers):
     return svr_features
 
 
-def generate_matching_sequences(sequence, core, width):
+def generate_matching_sequences(sequence, core, width, core_start=None):
     """
     Returns sub-sequences of width, that match the core in the middle.
     :param sequence: The the sequence to search, such as the whole sequence for a chromosome.
@@ -85,7 +85,8 @@ def generate_matching_sequences(sequence, core, width):
     max_start = sequence_width - width
     # The core positions are calculated relative to the window (and not the overall sequence)
     # This works as long as both core and width are same parity
-    core_start = (width - core_width) / 2
+    if core_start is None:
+        core_start = (width - core_width) / 2
     for start in range(max_start):
         end = start + width
         window_sequence = sequence[start:end]
@@ -167,7 +168,8 @@ def print_bed(file_handle, chrom, position, width, score):
     print >> file_handle, chrom, position, position + width, score
 
 
-def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, const_intercept, check_size, transform_scores, output_file):
+def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, const_intercept,
+                  check_size, core_start, transform_scores, output_file):
     """
     Generate predictions on the provided fasta file.
     Predictions will only be generated on sequences of width 'width', matching the nucleotides of 'core' in the center
@@ -180,6 +182,7 @@ def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, co
     :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
     :param const_intercept: true or false - whether or not to add a constant term to the matrix generation. Must match model generation
     :param check_size: true or false - if true, check the model's size against the expected size given kmers/const_intercept/width
+    :param core_start: Integer or None. If not None, used instead of width-len(core) / 2 for core search in window.
     :param transform_scores: true or false - whether or not to transform the scores using the transform_score function
     :param output_file: Output file to write, in bed format
     :return: None
@@ -199,12 +202,12 @@ def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, co
     with open(output_file, 'w') as output:
         for sequence_name in sequence_names:
             print 'Predicting on', sequence_name
-            for position, sequence, score in predict_sequence(idx, sequence_name, core, width, model_dict, kmers, const_intercept, transform_scores):
+            for position, sequence, score in predict_sequence(idx, sequence_name, core, width, model_dict, kmers, const_intercept, core_start, transform_scores):
                 print_bed(output, sequence_name, position, width, score)
     print 'Done'
 
 
-def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers, const_intercept, transform_scores):
+def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers, const_intercept, core_start, transform_scores):
     """
     Generates predictions for a single sequence
     :param sequence_idx: The indexed SeqIO object
@@ -214,6 +217,7 @@ def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers
     :param model_dict: Dictionary containing a loaded svm model at 'model' and optionally it's size at 'size'
     :param kmers: List of integers (e.g. [1,2,3]) for base combination in prediction generation. Must match model generation parameters
     :param const_intercept: true or false - whether or not to add a constant term to the matrix generation. Must match model generation
+    :param core_start: Integer or None. If not none, used instead of width-len(core) / 2 for core search in window.
     :param transform_scores: true or false - whether or not to transform the scores using the transform_score function
     :return: A generator, yielding the start position, sequence, and prediction score
     """
@@ -221,7 +225,7 @@ def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers
     sequence = get_sequence_named(sequence_idx, sequence_name)
     print "Generating matching sequences for core {}, width {}".format(core, width)
 
-    for position, matching_sequences in generate_matching_sequences(sequence, core, width):
+    for position, matching_sequences in generate_matching_sequences(sequence, core, width, core_start):
         # generator returns a position, and a tuple of 1 or 2 sequences
         # If two sequences are returned, core is palindromic and can bind on either strand
         # So generate predictions for both and return the best
@@ -305,6 +309,9 @@ def main():
                         help='Skip checking model size against kmers/width/const_interceipt. Size checking ensures model and parameters are recommended, but takes a few seconds on startup.',
                         dest='skip_size_check',
                         default=False)
+    parser.add_argument('--core-start', metavar='Offset',
+                        help='Override position to look for the core inside the width. Defaults to (width - core_width) / 2 if not specififed.',
+                        dest='core_start')
     parser.add_argument('-t',
                         action='store_true',
                         help='Transforms predictions with logistic function f(x) = 1 / ( 1 + exp(-x) )',
@@ -326,7 +333,7 @@ def main():
         fasta_file = args.sequence_fasta_file
         sequence_names = args.sequence_names
     predict_fasta(fasta_file, sequence_names, args.core, args.width, args.model_file, args.kmers, const_intercept,
-                  check_size, args.transform_scores, args.output_file)
+                  check_size, args.core_start, args.transform_scores, args.output_file)
 
 
 if __name__ == '__main__':
