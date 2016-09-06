@@ -311,6 +311,7 @@ def main():
                         default=False)
     parser.add_argument('--core-start', metavar='Offset',
                         help='Override position to look for the core inside the width. Defaults to (width - core_width) / 2 if not specififed.',
+                        type=int,
                         dest='core_start')
     parser.add_argument('-t',
                         action='store_true',
