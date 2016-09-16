@@ -87,7 +87,7 @@ def generate_matching_sequences(sequence, core, width, core_start=None):
     # This works as long as both core and width are same parity
     if core_start is None:
         core_start = (width - core_width) / 2
-    for start in range(max_start):
+    for start in range(max_start + 1):
         end = start + width
         window_sequence = sequence[start:end]
         # If any of the bases in the window are unknown, we cannot predict on the sequence
