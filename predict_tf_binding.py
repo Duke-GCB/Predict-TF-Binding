@@ -323,8 +323,8 @@ def main():
     parser.add_argument('-o', metavar='OutputFile',
                         help='Output file to write, in bed format',
                         dest='output_files',
-                        nargs='+',
-                        required=True)
+                        nargs='*',
+                        required=False)
     args = parser.parse_args()
     const_intercept = args.const_intercept or False
     check_size = not args.skip_size_check
@@ -338,15 +338,21 @@ def main():
         fasta_file = args.sequence_fasta_file
         sequence_names = args.sequence_names
 
+    output_files = args.output_files
+
+    if not output_files:
+        # no output files specified, determine from model/core
+        output_files = ['predict_output_{}_core_{}.bed'.format(i + 1, core) for i, core in enumerate(args.cores)]
+
     # Ensure that model/core/output files are the same length
-    if not len(args.output_files) == len(args.cores) == len(args.model_files):
+    if not len(output_files) == len(args.cores) == len(args.model_files):
         raise Exception('When specifying multiple cores/models/output files, you must specify the same number of each')
 
-    if len(args.output_files) != len(set(args.output_files)):
+    if len(output_files) != len(set(output_files)):
         raise Exception('When specifying multiple output files, they must be unique')
 
     processes = list()
-    for (model_file, core, output_file) in zip(args.model_files, args.cores, args.output_files):
+    for (model_file, core, output_file) in zip(args.model_files, args.cores, output_files):
         p = Process(target=predict_fasta, args=(fasta_file, sequence_names, core, args.width, model_file, args.kmers,
                                                 const_intercept, check_size, args.core_start, args.transform_scores,
                                                 output_file))
