@@ -4,6 +4,7 @@ import argparse
 import itertools
 from svmutil import *
 from math import exp
+from multiprocessing import Process
 
 from Bio import SeqIO, Seq
 
@@ -282,12 +283,14 @@ def main():
                         nargs='*',)
     parser.add_argument('-m', metavar='ModelFile',
                         help='The .model file generated from LibSVM, matching the specified core and kmers' ,
-                        dest='model_file',
-                        required=True)
+                        dest='model_files',
+                        required=True,
+                        nargs='+')
     parser.add_argument('-c', metavar='Core',
                         help='Sequence of nucleotides to search as center of predictions',
-                        dest='core',
-                        required=True)
+                        dest='cores',
+                        required=True,
+                        nargs='+')
     parser.add_argument('-w', metavar='Width',
                         type=int,
                         help='Width, in bases, of the window on which to generate predictions',
@@ -319,7 +322,8 @@ def main():
                         dest='transform_scores')
     parser.add_argument('-o', metavar='OutputFile',
                         help='Output file to write, in bed format',
-                        dest='output_file',
+                        dest='output_files',
+                        nargs='+',
                         required=True)
     args = parser.parse_args()
     const_intercept = args.const_intercept or False
@@ -333,8 +337,23 @@ def main():
     else:
         fasta_file = args.sequence_fasta_file
         sequence_names = args.sequence_names
-    predict_fasta(fasta_file, sequence_names, args.core, args.width, args.model_file, args.kmers, const_intercept,
-                  check_size, args.core_start, args.transform_scores, args.output_file)
+
+    # Ensure that model/core/output files are the same length
+    if not len(args.output_files) == len(args.cores) == len(args.model_files):
+        raise Exception('When specifying multiple cores/models/output files, you must specify the same number of each')
+
+    if len(args.output_files) != len(set(args.output_files)):
+        raise Exception('When specifying multiple output files, they must be unique')
+
+    processes = list()
+    for (model_file, core, output_file) in zip(args.model_files, args.cores, args.output_files):
+        p = Process(target=predict_fasta, args=(fasta_file, sequence_names, core, args.width, model_file, args.kmers,
+                                                const_intercept, check_size, args.core_start, args.transform_scores,
+                                                output_file))
+        processes.append(p)
+        p.start()
+    for p in processes:
+        p.join()
 
 
 if __name__ == '__main__':
