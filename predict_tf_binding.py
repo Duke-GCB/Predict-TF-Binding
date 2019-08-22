@@ -2,7 +2,7 @@
 
 import argparse
 import itertools
-from svmutil import *
+from libsvm.svmutil import *
 from math import exp
 from multiprocessing import Process
 
@@ -87,7 +87,7 @@ def generate_matching_sequences(sequence, core, width, core_start=None):
     # The core positions are calculated relative to the window (and not the overall sequence)
     # This works as long as both core and width are same parity
     if core_start is None:
-        core_start = (width - core_width) / 2
+        core_start = int((width - core_width) / 2)
     for start in range(max_start + 1):
         end = start + width
         window_sequence = sequence[start:end]
