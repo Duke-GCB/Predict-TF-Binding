@@ -40,7 +40,7 @@ def combine_predictions(bed_files):
         start ASC
     '''
     for row in conn.execute(query):
-        print ' '.join([str(x) for x in row])
+        print(' '.join([str(x) for x in row]))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = 'Combines several prediction BED files into a single BED file, using'

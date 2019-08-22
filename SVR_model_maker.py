@@ -81,7 +81,7 @@ f_info = open(infofile, 'a', 1)
 
 # ===============================================================================
 
-print "\n_____  Running SVR_model_maker _____"
+print("\n_____  Running SVR_model_maker _____")
 
 ''' Notes ======================================================================
 PBM file format: Tab separated file has header line with column names, and
@@ -109,8 +109,8 @@ if args.gridsearch:
         c_list = c_list_in.split()
         c_list = [float(x) for x in c_list]
     else:
-        print '\nEnter the different cost values to test, separated by spaces (i.e. "0.01 0.1 1")'
-        c_list_in = raw_input(':')
+        print('\nEnter the different cost values to test, separated by spaces (i.e. "0.01 0.1 1")')
+        c_list_in = input(':')
         c_list = c_list_in.split()
         c_list = [float(x) for x in c_list]
     if args.p:
@@ -118,8 +118,8 @@ if args.gridsearch:
         p_list = p_list_in.split()
         p_list = [float(x) for x in p_list]
     else:
-        print '\nEnter the different epsilon values to test, separated by spaces'
-        p_list_in = raw_input(':')
+        print('\nEnter the different epsilon values to test, separated by spaces')
+        p_list_in = input(':')
         p_list = p_list_in.split()
         p_list = [float(x) for x in p_list]
 else:
@@ -127,13 +127,13 @@ else:
     if args.c:
         c = args.c
     else:
-        print "\nLibSVM cost needs to be specified (if not known, try 0.01)"
-        c = raw_input(':')
+        print("\nLibSVM cost needs to be specified (if not known, try 0.01)")
+        c = input(':')
     if args.p:
         p = args.p
     else:
-        print "\nLibSVM epsilon needs to be specified (if not known, try 0.01)"
-        p = raw_input(':')
+        print("\nLibSVM epsilon needs to be specified (if not known, try 0.01)")
+        p = input(':')
 
 ''' Other Parameters ================================================================='''
 ### Different parameters used during the process that can be changed from there defaults here
@@ -159,13 +159,13 @@ searchstrings = args.searchstrings
 
 unique_searchstring_lengths = set(map(len, searchstrings))
 if len(unique_searchstring_lengths) != 1:
-    print "Error: Search strings must be uniform length"
+    print("Error: Search strings must be uniform length")
     sys.exit(1)
 
 searchstring_length = list(unique_searchstring_lengths)[0]
 if (searchstring_length + length) % 2 == 1: # Must both be even or both be odd
-    print "Error: Search string length ({0}) and sequence length ({1}) must both be even or both be " \
-          "odd".format(searchstring_length, length)
+    print("Error: Search string length ({0}) and sequence length ({1}) must both be even or both be " \
+          "odd".format(searchstring_length, length))
     sys.exit(1)
 
 # Number bins we split the sequences into for SVR, where one bin is used for
@@ -179,7 +179,7 @@ def yes_no_query(question):
     sys.stdout.write('%s [y/n]\n' % question)
     while True:
         try:
-            return strtobool(raw_input().lower())
+            return strtobool(input().lower())
         except ValueError:
             sys.stdout.write('Please respond with \'y\' or \'n\'.\n')
 
@@ -190,7 +190,7 @@ def read_data(filename):
     try:
         f = open(filename, 'r')  # opens the file as "f"
     except IOError:
-        print "Could not open the file:", filename
+        print("Could not open the file:", filename)
         sys.exit()
     for line in f:  # for each line in the file
         l = string.split(line.strip(),
@@ -245,27 +245,27 @@ def libsvm_run_gridsearch(p_list, c_list, pbmfile):
     results = []
 
     ### Create your own module for selecting sequences from the PBM file for your protein
-    print "\nFinding good sequences from the pbmfile to use for SVR"
+    print("\nFinding good sequences from the pbmfile to use for SVR")
     seqlist = read_pbm_sequences(pbmfile)
     check_data_length(seqlist)
     ### Creating the matrix file
-    print "Generating matrix file for grid search..."
+    print("Generating matrix file for grid search...")
     svrmatrix = libsvm_generate_matrix(seqlist)[0]
     matrixfile = outprefix + '_gridsearch_matrix.txt'
     f = open(matrixfile, 'w')
-    for line in svrmatrix: print >> f, ("\t".join(map(str, line)))
+    for line in svrmatrix: print(("\t".join(map(str, line))), file=f)
     f.close()
 
     ### Reading data in libsvm format
-    print '\nDoing Libsvm grid search for', pbmfile, "with 5-fold cross validation"
-    print >> f_info, '\nDoing Libsvm grid search for', pbmfile, "with 5-fold cross validation"
+    print('\nDoing Libsvm grid search for', pbmfile, "with 5-fold cross validation")
+    print('\nDoing Libsvm grid search for', pbmfile, "with 5-fold cross validation", file=f_info)
 
     for c in c_list:  # testing different values of C (cost)
         row = []
         pvals = [' ']
         for p in p_list:  # testing different values of epsilon, for each different value of C
             start_time = time.time()
-            print "\nTesting epsilon =", p, "and cost =", c
+            print("\nTesting epsilon =", p, "and cost =", c)
             pvals.append(p)
             command = "svm-train -s 3 -v 5 -t 0 -c " + str(c) + " -p " + str(
                     p) + " " + matrixfile  # the command we want to run
@@ -273,25 +273,25 @@ def libsvm_run_gridsearch(p_list, c_list, pbmfile):
             output, error = Popen(args, stdout=PIPE,
                                   stderr=PIPE).communicate()  # running the command, and storing the results
             if len(error) > 0:  # if running the command caused an error, print the error, then quit the loop
-                print error
+                print(error)
                 break
             out = string.split(output, '\n')  # Splitting the output by line
             SCC = float(string.split(out[-2])[
                             -1])  # the output is a list of strings (lines), the last word in the last line (with info) is the R squared
-            print 'RSQ=', SCC
-            print >> f_info, 'p=', p, ' c=', c, ' RSQ=', SCC
-            print >> f_info, 'Round completed in', (time.time() - start_time) / 60, 'minutes'
-            print 'Round completed in', (time.time() - start_time) / 60, 'minutes'
+            print('RSQ=', SCC)
+            print('p=', p, ' c=', c, ' RSQ=', SCC, file=f_info)
+            print('Round completed in', (time.time() - start_time) / 60, 'minutes', file=f_info)
+            print('Round completed in', (time.time() - start_time) / 60, 'minutes')
             if SCC > test:
                 test = SCC
                 best = [SCC, c, p]
             row.append(SCC)
         results.append([c] + row)
     results.insert(0, pvals)
-    print >> f_info, '\nTable of results - columns are epsilon, and rows are cost\n'
-    for line in results: print >> f_info, ("\t".join(map(str, line)))
-    print >> f_info, '\nBest R squared is ', best[0], ' - with c = ', best[1], ' and p = ', best[2]
-    print '\nBest R squared is ', best[0], ' - with c = ', best[1], ' and p = ', best[2]
+    print('\nTable of results - columns are epsilon, and rows are cost\n', file=f_info)
+    for line in results: print(("\t".join(map(str, line))), file=f_info)
+    print('\nBest R squared is ', best[0], ' - with c = ', best[1], ' and p = ', best[2], file=f_info)
+    print('\nBest R squared is ', best[0], ' - with c = ', best[1], ' and p = ', best[2])
 
 
 PBM_SCORE_COLUMN = 5
@@ -300,7 +300,7 @@ PBM_SEQUENCE_COLUMN = 2
 
 def read_pbm_sequences(pbmfile):
     data = read_data(pbmfile)  # Read the PBM file into a list of lists
-    print "\nReading sequences from the PBM file"
+    print("\nReading sequences from the PBM file")
     data = data[1:]  # Remove the header row
     # Extract the score and the sequence
     return [[float(row[PBM_SCORE_COLUMN]), row[PBM_SEQUENCE_COLUMN]] for row in data]
@@ -311,8 +311,8 @@ MAX_NUM_SEQUENCES = 5000
 
 def check_data_length(seqlist):
     if len(seqlist) > MAX_NUM_SEQUENCES:
-        print "Error: PBM file contains {} sequences, which exceeds the maximum of {}".format(len(seqlist),
-                                                                                              MAX_NUM_SEQUENCES)
+        print("Error: PBM file contains {} sequences, which exceeds the maximum of {}".format(len(seqlist),
+                                                                                              MAX_NUM_SEQUENCES))
         sys.exit(1)
 
 
@@ -325,68 +325,68 @@ def libsvm_run(c, p, pbmfile):
     """ Using libsvm, for running the best set of values (best if obtained from a grid search), using the train and test matrix files"""
 
     ### Create your own module for selecting sequences from the PBM file for your protein
-    print "\nFinding good sequences from the pbmfile to use for SVR"
+    print("\nFinding good sequences from the pbmfile to use for SVR")
     allseqlist = read_pbm_sequences(pbmfile)
 
     check_data_length(allseqlist)
 
-    print "Using", len(allseqlist), "sequences"
+    print("Using", len(allseqlist), "sequences")
     traincount = int(float(len(allseqlist)) * ((float(svrbins) - 1) / float(svrbins)))
-    print "Using about", traincount, "sequences (+/-1) out of", len(
-            allseqlist), "for training the model"  # plus or minus 1, for each of the binned sets
-    print >> f_info, "Using about", traincount, "sequences (+/-1) out of", len(
-            allseqlist), "for training the model"  # plus or minus 1, for each of the binned sets
+    print("Using about", traincount, "sequences (+/-1) out of", len(
+            allseqlist), "for training the model")  # plus or minus 1, for each of the binned sets
+    print("Using about", traincount, "sequences (+/-1) out of", len(
+            allseqlist), "for training the model", file=f_info)  # plus or minus 1, for each of the binned sets
 
     random.shuffle(allseqlist)  # randomizing the list
     seqbins = list_bins(allseqlist, svrbins)
     rsqinfo = []
     #### Takes the set of bins and uses one for the test sequences, and the rest for training the model
     for x in range(len(seqbins)):
-        print "\nRunning SVR on round", x + 1, "of", len(seqbins)
+        print("\nRunning SVR on round", x + 1, "of", len(seqbins))
         testseq = seqbins[x]
         trainseq = list(itertools.chain(*(
             seqbins[:x] + seqbins[
                           x + 1:])))  # Note, the remaining bins need to be collapsed into a single list of lists
         # print >>f_info, 'Number of sequences in the training data set is', len(trainseq), 'out of', len(allseqlist), 'sequences'
-        print "Generating the matrix files..."
+        print("Generating the matrix files...")
         trainmatrix, featureinfo = libsvm_generate_matrix(trainseq)
         testmatrix = libsvm_generate_matrix(testseq)[0]
 
         ### Writting matrix related output files
         trainmatrixfile = outprefix + '_train_matrix' + '_' + str(x + 1) + '.txt'
         f1 = open(trainmatrixfile, 'w', 1)
-        for line in trainmatrix: print >> f1, ("\t".join(map(str, line)))
+        for line in trainmatrix: print(("\t".join(map(str, line))), file=f1)
         f1.close()
         testmatrixfile = outprefix + '_test_matrix' + '_' + str(x + 1) + '.txt'
         f2 = open(testmatrixfile, 'w', 1)
-        for line in testmatrix: print >> f2, ("\t".join(map(str, line)))
+        for line in testmatrix: print(("\t".join(map(str, line))), file=f2)
         f2.close()
 
         ###Training the model
         modelfile = trainmatrixfile + ".model"  # specify the model file name to svm-train, otherwise it writes in current dir
-        print 'Training the model for run', x + 1, '...'
+        print('Training the model for run', x + 1, '...')
         command = "svm-train -s 3 -t 0 -c " + str(c) + " -p " + str(
                 p) + " " + trainmatrixfile + " " + modelfile  # the command we want to run
         args = string.split(command)  # we need to split these into individual items
         output, error = Popen(args, stdout=PIPE,
                               stderr=PIPE).communicate()  # running the command, and storing the results
         if len(error) > 0:  # if running the command caused an error, print the error
-            print error
+            print(error)
 
 
         ###testing the model
-        print 'Testing the model for run', x + 1, '...'
+        print('Testing the model for run', x + 1, '...')
         outfile = testmatrixfile[0:-4] + '_SVR-prediction.txt'
         args = ["svm-predict", testmatrixfile, modelfile, outfile]
         output, error = Popen(args, stdout=PIPE,
                               stderr=PIPE).communicate()  # running the command, and storing the results
         if len(error) > 0:  # if running the command caused an error, print the error
-            print error
+            print(error)
         out = string.split(output, '\n')  # Splitting the output by line
         SCC = float(string.split(out[-2])[
                         -2])  # the output is a list of strings (lines), the last word in the last line (with info) is the R squared
-        print 'Squared Correlation Coefficient for run', x + 1, 'is', SCC
-        print >> f_info, 'Squared Correlation Coefficient for run', x + 1, 'is', SCC
+        print('Squared Correlation Coefficient for run', x + 1, 'is', SCC)
+        print('Squared Correlation Coefficient for run', x + 1, 'is', SCC, file=f_info)
         rsqinfo.append([SCC, x])
 
         ### Printing the extra files if we have the extrafiles flag
@@ -394,7 +394,7 @@ def libsvm_run(c, p, pbmfile):
             if x == 0:  # We only need this file once, not for every iteration
                 featurefile = outprefix + '_example-feature-list.txt'
                 f0 = open(featurefile, 'w', 1)
-                for line in featureinfo: print >> f0, ("\t".join(map(str, line)))
+                for line in featureinfo: print(("\t".join(map(str, line))), file=f0)
                 f0.close()
         if SCC >= max([rsqinfo[i][0] for i in range(len(rsqinfo))]):
             ###organizing the results
@@ -411,17 +411,17 @@ def libsvm_run(c, p, pbmfile):
                range(len(rsqinfo))]  # getting just the r squared scores (first column) from the list
     mean_rsq = numpy.mean(rsqlist)  # getting the average r squared
     std_rsq = numpy.std(rsqlist)  # getting the standard deviation of the r squareds
-    print "\nBest R squared is", rsqinfo[0][0], "from run", bestrun + 1
-    print "Average R squared =", mean_rsq, "\nStandard deviation =", std_rsq,
-    print >> f_info, "\nBest R squared is", rsqinfo[0][
-        0], "from run", bestrun + 1, "- Mean = ", mean_rsq, "- Standard Deviation = ", std_rsq
+    print("\nBest R squared is", rsqinfo[0][0], "from run", bestrun + 1)
+    print("Average R squared =", mean_rsq, "\nStandard deviation =", std_rsq, end=' ')
+    print("\nBest R squared is", rsqinfo[0][
+        0], "from run", bestrun + 1, "- Mean = ", mean_rsq, "- Standard Deviation = ", std_rsq, file=f_info)
 
     if extrafiles == 'yes':
         f3 = open(trainseqfile, 'w', 1)
-        for line in trainseq: print >> f3, ("\t".join(map(str, line)))
+        for line in trainseq: print(("\t".join(map(str, line))), file=f3)
         f3.close()
         f4 = open(testseqfile, 'w', 1)
-        for line in testseq: print >> f4, ("\t".join(map(str, line)))
+        for line in testseq: print(("\t".join(map(str, line))), file=f4)
         f4.close()
 
     ### Keeping only the files for the best run, and renaming them
@@ -448,21 +448,21 @@ def libsvm_run(c, p, pbmfile):
         bestresults.append([testdata[n1][0], predictdata[n1][0]])
     resultsfile = outprefix + '_SVR-test_prediction-results.txt'
     f = open(resultsfile, 'w', 1)
-    for line in bestresults: print >> f, ("\t".join(map(str, line)))
+    for line in bestresults: print(("\t".join(map(str, line))), file=f)
     f.close()
 
     ### Writing info to the info file
-    print >> f_info, "\nOutput files for best run are:"
-    print >> f_info, ' ', outprefix + '_train_matrix.txt', "<-- The LibSVM matrix file for the sequences used to train the model"
-    print >> f_info, ' ', outprefix + '_test_matrix.txt', "<-- The LibSVM matrix file for the sequences used to test the model"
+    print("\nOutput files for best run are:", file=f_info)
+    print(' ', outprefix + '_train_matrix.txt', "<-- The LibSVM matrix file for the sequences used to train the model", file=f_info)
+    print(' ', outprefix + '_test_matrix.txt', "<-- The LibSVM matrix file for the sequences used to test the model", file=f_info)
     if extrafiles == 'yes':
-        print >> f_info, ' ', featurefile, "<-- The LibSVM matrix for the sequences used to train the model"
-        print >> f_info, ' ', outprefix + '_train_sequences.txt', "<-- The actual sequences and the corresponding scores used for training the model"
-        print >> f_info, ' ', outprefix + '_test_sequences.txt', "<-- The actual sequences and the corresponding scores used for testing the model"
-        print >> f_info, ' ', featurefile, "<-- List of definitions for the features (the feature sequence and it's position in the complete sequence"
-    print >> f_info, ' ', outprefix + '_train_matrix.txt.model', '  <-- The model file that can be used by libsvm to predict binding affinities'
-    print >> f_info, ' ', outprefix + '_test_matrix_SVR-prediction.txt', '  <-- The actual predicted intensity scores for the test set generated by LibSVM'
-    print >> f_info, ' ', resultsfile, '  <-- Contains both the actual intensities, and predicted intensities for the test set'
+        print(' ', featurefile, "<-- The LibSVM matrix for the sequences used to train the model", file=f_info)
+        print(' ', outprefix + '_train_sequences.txt', "<-- The actual sequences and the corresponding scores used for training the model", file=f_info)
+        print(' ', outprefix + '_test_sequences.txt', "<-- The actual sequences and the corresponding scores used for testing the model", file=f_info)
+        print(' ', featurefile, "<-- List of definitions for the features (the feature sequence and it's position in the complete sequence", file=f_info)
+    print(' ', outprefix + '_train_matrix.txt.model', '  <-- The model file that can be used by libsvm to predict binding affinities', file=f_info)
+    print(' ', outprefix + '_test_matrix_SVR-prediction.txt', '  <-- The actual predicted intensity scores for the test set generated by LibSVM', file=f_info)
+    print(' ', resultsfile, '  <-- Contains both the actual intensities, and predicted intensities for the test set', file=f_info)
 
 
 def libsvm_feature_weights(modelfile):
@@ -506,13 +506,13 @@ def libsvm_feature_weights(modelfile):
             #    print weights
             #    for x in range(1,346): print (x+1), "\t", weights[x]
     output = [['Feature_Number', 'Feature_Weight', 'Position', 'Feature', 'Count']]
-    print "Writing the output"
+    print("Writing the output")
     for n3 in range(len(weights) - 1):
         #         print features[n3][0],weights[n3+2],features[n3][1],features[n3][2]
         output.append([features[n3][0], weights[n3 + 2], features[n3][1], features[n3][2], counts[n3 + 2]])
     # for line in output: print "\t".join(map(str,line))
     f = open(modelfile[:-10] + '-weights.txt', "w")
-    for line in output: print >> f, "\t".join(map(str, line))
+    for line in output: print("\t".join(map(str, line)), file=f)
     f.close()
     return output
 
@@ -524,7 +524,7 @@ pbmdata = read_data(pbmfile)
 scores = [float(row[5]) for row in pbmdata[1:]]
 maxval, minval = max(scores), min(scores)
 if maxval > 1 or maxval < 0 or minval > 1 or minval < 0:  # if the scores are not between 0 and 1, we need to normalize everything
-    print >> f_info, "Normalizing the data in the PBM file"
+    print("Normalizing the data in the PBM file", file=f_info)
     for i in range(1, len(pbmdata)):
         for j in [3, 4, 5]:  # each of the columns we need to normalize
             score = float(pbmdata[i][j])
@@ -532,11 +532,11 @@ if maxval > 1 or maxval < 0 or minval > 1 or minval < 0:  # if the scores are no
         pbmdata[i][6] = pbmdata[i][3] - pbmdata[i][4]  # getting the new difference
     newpbmfile = os.path.splitext(pbmfile)[0] + '_normalized.txt'
     f = open(newpbmfile, 'w')
-    for line in pbmdata: print >> f, "\t".join(map(str, line))
+    for line in pbmdata: print("\t".join(map(str, line)), file=f)
     f.close()
     pbmfile = newpbmfile  # making sure we only use this new normalized file from now on
 
-print >> f_info, '\n================================================================================\n', \
+print('\n================================================================================\n', \
     '\nProgram started on', time.strftime("%m\%d\%Y %H:%M"), \
     '\nGenerating the SVR model file, using libsvm', \
     '\n\nParamaters used in this run:', \
@@ -547,16 +547,16 @@ print >> f_info, '\n============================================================
     '\n ', length, '  <-- Sequence Length', \
     '\n ', kinfo, '  <-- Feature type', \
     '\n ', svrbins, '  <-- Number bins we split the sequences into for SVR, where for each bin, it is used for testing, with the rest used for training the model', \
-    '\n  Linear   <-- LibSVM support vector regression model type',
+    '\n  Linear   <-- LibSVM support vector regression model type', end=' ', file=f_info)
 if args.gridsearch:
-    print "Running a grid search. Use the results and re-run this program to refine another grid search, or run full LibSVM"
-    print "\nCost values to be tested:", c_list, "\nEpsilon values to be tested:", p_list
-    print >> f_info, '\n ', c_list, '  <-- LibSVM costs tested', '\n ', p_list, '  <-- LibSVM epsilons tested\n'
+    print("Running a grid search. Use the results and re-run this program to refine another grid search, or run full LibSVM")
+    print("\nCost values to be tested:", c_list, "\nEpsilon values to be tested:", p_list)
+    print('\n ', c_list, '  <-- LibSVM costs tested', '\n ', p_list, '  <-- LibSVM epsilons tested\n', file=f_info)
     libsvm_run_gridsearch(p_list, c_list, pbmfile)
 
 else:
-    print "Running full libsvm"
-    print >> f_info, '\n ', c, '  <-- LibSVM cost', '\n ', p, '  <-- LibSVM epsilon\n'
+    print("Running full libsvm")
+    print('\n ', c, '  <-- LibSVM cost', '\n ', p, '  <-- LibSVM epsilon\n', file=f_info)
     libsvm_run(c, p, pbmfile)
 
 f_info.close()
