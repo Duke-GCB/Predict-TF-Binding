@@ -47,7 +47,7 @@ if __name__ == '__main__':
                                                    'the highest score in the case of duplicate regions')
     parser.add_argument('bedfiles',
                         metavar='bed_file',
-                        type=file,
+                        type=open,
                         help='Bed files to consider',
                         nargs='+',)
     args = parser.parse_args()
