@@ -25,12 +25,12 @@ def change_precision(input, output, precision, delimiter, source_index=3):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = 'Change precision of a float column in a BED file')
-    parser.add_argument('inputfile', type=argparse.FileType('rb'))
+    parser.add_argument('inputfile', type=argparse.FileType('r'))
     parser.add_argument('precision', type=int)
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--spaces', action='store_const', const=b' ', dest='delimiter')
-    group.add_argument('--tabs', action='store_const', const=b'\t', dest='delimiter')
-    group.add_argument('--commas', action='store_const', const=b',', dest='delimiter')
+    group.add_argument('--spaces', action='store_const', const=' ', dest='delimiter')
+    group.add_argument('--tabs', action='store_const', const='\t', dest='delimiter')
+    group.add_argument('--commas', action='store_const', const=',', dest='delimiter')
     parser.add_argument_group()
     args = parser.parse_args()
     change_precision(args.inputfile, sys.stdout, args.precision, args.delimiter)

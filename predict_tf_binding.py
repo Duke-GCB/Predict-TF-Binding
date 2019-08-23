@@ -2,7 +2,7 @@
 
 import argparse
 import itertools
-from svmutil import *
+from libsvm.svmutil import *
 from math import exp
 from multiprocessing import Process
 
@@ -54,7 +54,7 @@ def svr_features_from_sequence(seq, kmers):
                 feature_index = features.index(sub_seq)
                 exploded[feature_index]['value'] = 1
             except ValueError:
-                print "Warning: sub-sequence '{}' not found in features".format(sub_seq)
+                print("Warning: sub-sequence '{}' not found in features".format(sub_seq))
             svr_features.extend(exploded)
     return svr_features
 
@@ -87,7 +87,7 @@ def generate_matching_sequences(sequence, core, width, core_start=None):
     # The core positions are calculated relative to the window (and not the overall sequence)
     # This works as long as both core and width are same parity
     if core_start is None:
-        core_start = (width - core_width) / 2
+        core_start = int((width - core_width) / 2)
     for start in range(max_start + 1):
         end = start + width
         window_sequence = sequence[start:end]
@@ -166,7 +166,7 @@ def print_bed(file_handle, chrom, position, width, score):
     :param score: floating-point value of the annotation
     :return: None
     """
-    print >> file_handle, chrom, position, position + width, score
+    print(chrom, position, position + width, score, file=file_handle)
 
 
 def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, const_intercept,
@@ -189,10 +189,10 @@ def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, co
     :return: None
     """
 
-    print 'Loading model', model_file
+    print('Loading model', model_file)
     model_dict = load_model(model_file, check_size)
 
-    print 'Loading fasta', fasta_file
+    print('Loading fasta', fasta_file)
     idx = read_fasta_idx(fasta_file)
 
     # If no sequences are named, use all in the index
@@ -202,10 +202,10 @@ def predict_fasta(fasta_file, sequence_names, core, width, model_file, kmers, co
     # Iterate over sequence
     with open(output_file, 'w') as output:
         for sequence_name in sequence_names:
-            print 'Predicting on', sequence_name
+            print('Predicting on', sequence_name)
             for position, sequence, score in predict_sequence(idx, sequence_name, core, width, model_dict, kmers, const_intercept, core_start, transform_scores):
                 print_bed(output, sequence_name, position, width, score)
-    print 'Done'
+    print('Done')
 
 
 def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers, const_intercept, core_start, transform_scores):
@@ -224,7 +224,7 @@ def predict_sequence(sequence_idx, sequence_name, core, width, model_dict, kmers
     """
 
     sequence = get_sequence_named(sequence_idx, sequence_name)
-    print "Generating matching sequences for core {}, width {}".format(core, width)
+    print("Generating matching sequences for core {}, width {}".format(core, width))
 
     for position, matching_sequences in generate_matching_sequences(sequence, core, width, core_start):
         # generator returns a position, and a tuple of 1 or 2 sequences

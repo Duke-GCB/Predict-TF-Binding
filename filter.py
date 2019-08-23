@@ -27,12 +27,12 @@ def filter_scores(input, output, delimiter, threshhold=0.0, source_index=3):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('inputfile', type=argparse.FileType('rb'))
+    parser.add_argument('inputfile', type=argparse.FileType('r'))
     parser.add_argument('threshhold', type=float, default=0.0)
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--spaces', action='store_const', const=b' ', dest='delimiter')
-    group.add_argument('--tabs', action='store_const', const=b'\t', dest='delimiter')
-    group.add_argument('--commas', action='store_const', const=b',', dest='delimiter')
+    group.add_argument('--spaces', action='store_const', const=' ', dest='delimiter')
+    group.add_argument('--tabs', action='store_const', const='\t', dest='delimiter')
+    group.add_argument('--commas', action='store_const', const=',', dest='delimiter')
     parser.add_argument_group()
     args = parser.parse_args()
     filter_scores(args.inputfile, sys.stdout, args.delimiter, args.threshhold)
